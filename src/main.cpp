@@ -7,26 +7,22 @@
 unsigned long previousMillis = 0;
 const long interval = 100;  // interval at which to blink (milliseconds)
 
-/*a
+
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
 
 // Number of LEDs in the ring
 const uint8_t led_count = 24;
 
-// If the jog wheels or other encoders are too slow in your software, increase
-// this value.
-// (It will be multiplied with the actual speed of the encoder, as the name
-// implies.) Default is 1.
-const int speedMultiplier = 1;
-CCRotaryEncoder enc {
-  {1, 0},                                // pins
-  MIDI_CC::General_Purpose_Controller_5, // address
-  speedMultiplier,                       // multiplier
-  4,                                     // pulses per click
+// Instantiate a CCAbsoluteEncoder object
+CCAbsoluteEncoder enc {
+  {2, 3},       // pins
+  MIDI_CC::Pan, // MIDI address (CC number + optional channel)
+  1,            // optional multiplier if the control isn't fast enough
 };
+ 
 
-*/
+
 
 /*
 Board Pinout
@@ -119,6 +115,7 @@ void setup(void) {
   
   Serial.println(F("LED Ring initialization complete"));
 
+  Control_Surface.begin(); // Initialize Control Surface
 
 }
 
@@ -132,12 +129,19 @@ void loop() {
   
   ledRing.LEDRingSmall_GlobalCurrent(0x10);
   ledRing.LEDRingSmall_PWM_MODE();
-    
+
+  int num = enc.getValue();
+  if(num>24){
+    num=24;
+  }
   for (i = 0; i < 24; i++) {
-    ledRing.LEDRingSmall_Set_RED(i, 0xff);
+    ledRing.LEDRingSmall_Set_RED(i, i<num?0xff:0x00);
     delay(30);
   }
-/*
+
+    Control_Surface.loop(); // Update the Control Surface
+
+  /*
   for (i = 0; i < 24; i++) {
     ledRing.LEDRingSmall_Set_RED(i, 0);
     ledRing.LEDRingSmall_Set_GREEN(i, 0xff);
