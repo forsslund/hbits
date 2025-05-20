@@ -16,7 +16,7 @@ const uint8_t led_count = 24;
 
 // Instantiate a CCAbsoluteEncoder object
 CCAbsoluteEncoder enc {
-  {2, 3},       // pins
+  {5, 6},       // pins
   MIDI_CC::Pan, // MIDI address (CC number + optional channel)
   1,            // optional multiplier if the control isn't fast enough
 };
@@ -57,12 +57,12 @@ void setup(void) {
   
   Wire.begin();
 
-  for(int i=0; i<15; i++){
+  for(int i=0; i<4; i++){
     Serial.println(F("Loopaaa" ));
     Serial.println(i);
     digitalWrite(LED_BUILTIN, blink);
     blink = !blink;
-    delay(1000);
+    delay(500);
     }
 
 
@@ -119,11 +119,12 @@ void setup(void) {
 
 }
 
+int oldValue = 0;
 void loop() {
-    Serial.println(F("Loop"));
+    //Serial.println(F("Loop"));
     digitalWrite(LED_BUILTIN, blink);
     blink = !blink;
-    delay(250);
+    //delay(250);
     
 
   
@@ -131,12 +132,17 @@ void loop() {
   ledRing.LEDRingSmall_PWM_MODE();
 
   int num = enc.getValue();
+  if(num!=oldValue){
+    Serial.print(F("Encoder value: "));
+    Serial.println(num);
+    oldValue = num;
+  }
   if(num>24){
     num=24;
   }
   for (i = 0; i < 24; i++) {
-    ledRing.LEDRingSmall_Set_RED(i, i<num?0xff:0x00);
-    delay(30);
+    ledRing.LEDRingSmall_Set_RED(i, i<num*(24.0/20.0)?0xff:0x00);
+    //delay(30);
   }
 
     Control_Surface.loop(); // Update the Control Surface
