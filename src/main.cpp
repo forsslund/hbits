@@ -11,6 +11,15 @@ const long interval = 100;  // interval at which to blink (milliseconds)
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
 
+// Pin definitions
+const uint8_t FSR_PIN = 19;  // Force Sensitive Resistor pin
+
+// MIDI CC control for FSR
+CCPotentiometer fsr {
+    FSR_PIN,           // Analog pin
+    {0x07},           // CC 7 = Volume
+};
+
 // Number of LEDs in the ring
 const uint8_t led_count = 24;
 
@@ -116,7 +125,9 @@ void setup(void) {
   Serial.println(F("LED Ring initialization complete"));
 
   Control_Surface.begin(); // Initialize Control Surface
-
+  
+  // Configure FSR pin as input
+  pinMode(FSR_PIN, INPUT);
 }
 
 int oldValue = 0;
@@ -126,6 +137,13 @@ void loop() {
     blink = !blink;
     //delay(250);
     
+    /*
+    Serial.print(F("FSR value: "));
+    Serial.print(fsr.getValue());
+    Serial.print(F("  FSR raw value: "));
+    Serial.println(fsr.getRawValue());
+    delay(100);
+*/
 
   
   ledRing.LEDRingSmall_GlobalCurrent(0x10);

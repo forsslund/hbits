@@ -1,0 +1,19 @@
+ESP32 nano Compatible
+
+Pin 
+5   CLK  Incremental encoder A
+6   DT   Incremental encoder B
+23  SDA  I2c
+24  SCL  I2c
+19  A0   Force Sensitive Resistor
+9   D6   Mosfet PWM control 1
+10  D7   Mosfet PWM control 2
+11  D8   Mosfet PWM control 3
+12  D9   Mosfet PWM control 4
+
+I2C to 
+- LED Ring
+- Haptic driver
+- USB C PD (not really used)
+
+
