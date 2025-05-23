@@ -1,7 +1,11 @@
 #include <Arduino.h>
 #include <Control_Surface.h>
 #include <Wire.h>
+#include <Adafruit_DRV2605.h>
 #include "LEDRingSmall.h"
+
+// Initialize DRV2605L
+Adafruit_DRV2605 drv;
 
 // Variables for LED blinking
 unsigned long previousMillis = 0;
@@ -123,6 +127,27 @@ void setup(void) {
   Serial.println(F("PWM mode enabled"));
   
   Serial.println(F("LED Ring initialization complete"));
+
+  // Initialize DRV2605L
+  Serial.println("Initializing DRV2605L...");
+  if (!drv.begin()) {
+    Serial.println("Could not find DRV2605L");
+    while (1);
+  }
+  
+  // Set the library to use External trigger mode
+  drv.setMode(DRV2605_MODE_INTTRIG);
+  
+  // Set up a test pattern
+  drv.selectLibrary(1);
+  drv.setWaveform(0, 1);  // Strong click
+  drv.setWaveform(1, 13); // Double click
+  drv.setWaveform(2, 14); // Short buzz 
+  drv.setWaveform(3, 0);  // End pattern
+
+  // Play the pattern
+  drv.go();
+  delay(1000);  // Wait for pattern to complete
 
   Control_Surface.begin(); // Initialize Control Surface
   
