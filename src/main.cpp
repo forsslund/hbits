@@ -11,6 +11,10 @@ Adafruit_DRV2605 drv;
 unsigned long previousMillis = 0;
 const long interval = 100;  // interval at which to blink (milliseconds)
 
+// Variables for analog reading
+unsigned long previousAnalogMillis = 0;
+const long analogInterval = 100;  // interval for analog reading (milliseconds)
+//const uint8_t ANALOG_PIN = A0;  // Pin 19 (A0) for analog reading
 
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
@@ -20,7 +24,7 @@ const uint8_t FSR_PIN = 19;  // Force Sensitive Resistor pin
 
 // MIDI CC control for FSR
 CCPotentiometer fsr {
-    FSR_PIN,           // Analog pin
+    A0,//FSR_PIN,           // Analog pin
     {0x07},           // CC 7 = Volume
 };
 
@@ -70,12 +74,12 @@ void setup(void) {
   
   Wire.begin();
 
-  for(int i=0; i<4; i++){
+  for(int i=0; i<5; i++){
     Serial.println(F("Loopaaa" ));
     Serial.println(i);
     digitalWrite(LED_BUILTIN, blink);
     blink = !blink;
-    delay(500);
+    delay(1000);
     }
 
 
@@ -149,10 +153,14 @@ void setup(void) {
   drv.go();
   delay(1000);  // Wait for pattern to complete
 
+  Serial.println(F("DRV complete"));
+
   Control_Surface.begin(); // Initialize Control Surface
   
+  Serial.println(F("Control Surface initialized"));
+
   // Configure FSR pin as input
-  pinMode(FSR_PIN, INPUT);
+  //pinMode(FSR_PIN, INPUT);
 }
 
 int oldValue = 0;
@@ -189,6 +197,26 @@ void loop() {
   }
 
     Control_Surface.loop(); // Update the Control Surface
+
+    // Read analog value from A0 every 100ms
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousAnalogMillis >= analogInterval) {
+        previousAnalogMillis = currentMillis;
+        
+        // Read raw ADC value (0-1023 for 10-bit ADC)
+        //int rawValue = analogRead(ANALOG_PIN);
+        int rawValue = fsr.getRawValue();
+        
+        // Convert to voltage (assuming 3.3V reference)
+        float voltage = (rawValue / 1023.0) * 3.3;
+        
+        // Output to terminal
+        Serial.print(F("A0 Raw through fsr: "));
+        Serial.print(rawValue);
+        Serial.print(F("  Voltage: "));
+        Serial.print(voltage, 3);  // 3 decimal places
+        Serial.println(F("V"));
+    }
 
   /*
   for (i = 0; i < 24; i++) {
