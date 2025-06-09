@@ -7,6 +7,7 @@
 // Configuration flags - set to false if hardware not present
 constexpr bool HAS_DRV2605 = false;  // Set to false if no haptic driver
 constexpr bool HAS_FSR = false;  // Set to false if no haptic driver
+constexpr bool HAS_PUMP = false;  
 
 #if HAS_DRV2605
 #include <Adafruit_DRV2605.h>
@@ -21,7 +22,6 @@ const long interval = 100;  // interval at which to blink (milliseconds)
 // Variables for analog reading
 unsigned long previousAnalogMillis = 0;
 const long analogInterval = 100;  // interval for analog reading (milliseconds)
-//const uint8_t ANALOG_PIN = A0;  // Pin 19 (A0) for analog reading
 
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
@@ -68,7 +68,7 @@ void setup(void) {
   Wire.begin();
 
   for(int i=0; i<5; i++){
-    Serial.println(F("Loopaaa" ));
+    Serial.println(F("Loop" ));
     Serial.println(i);
     digitalWrite(LED_BUILTIN, blink);
     blink = !blink;
@@ -170,6 +170,9 @@ void setup(void) {
 
 int oldValue = 0;
 void loop() {
+
+
+  #ifdef HAS_PUMP
     //Serial.println(F("Loop"));
     digitalWrite(LED_BUILTIN, 1);
     //blink = !blink;
@@ -200,8 +203,7 @@ void loop() {
     Serial.print(F(" 2 "));
     delay(1000);
     Serial.println(F(" 3 "));
-
-  /*
+#else
   ledRing.LEDRingSmall_GlobalCurrent(0x10);
   ledRing.LEDRingSmall_PWM_MODE();
 
@@ -241,5 +243,5 @@ void loop() {
         Serial.println(F("V"));
     }
     #endif
-*/
+#endif
 }
