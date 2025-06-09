@@ -1,0 +1,138 @@
+LED Examples
+
+
+  /*
+
+
+  /*
+static uint8_t j = 0;
+static uint8_t i = 0;
+static uint16_t tim = 0;
+static uint8_t r = 5, g = 8, b = 20, rg = 40, br = 35, bg = 17;
+*/
+
+
+  for (i = 0; i < 24; i++) {
+    ledRing.LEDRingSmall_Set_RED(i, 0);
+    ledRing.LEDRingSmall_Set_GREEN(i, 0xff);
+    delay(30);
+  }
+
+  for (i = 0; i < 24; i++) {
+    ledRing.LEDRingSmall_Set_GREEN(i, 0);
+    ledRing.LEDRingSmall_Set_BLUE(i, 0xff);
+    delay(30);
+  }
+
+  for (i = 0; i < 24; i++) {
+
+    ledRing.LEDRingSmall_Set_RGB(i, 0xfc6b03);
+    delay(30);
+  }
+
+  for (i = 0; i < 24; i++) {
+
+    ledRing.LEDRingSmall_Set_RGB(i, 0xfc03c6);
+    delay(30);
+  }
+//  delay(2000);
+  //LEDRingSmall.LEDRingSmall_ClearAll();
+
+
+
+
+  for (tim = 0; tim < 2000; tim++) {
+
+
+
+    if ((tim % 5) == 0) {
+      ledRing.LEDRingSmall_Set_RED(r, 0);
+      r = r + 1;
+      if (r >= 24)
+        r = 0;
+      ledRing.LEDRingSmall_Set_RED(r, 0xFF);
+    }
+
+    if ((tim % 6) == 0) {
+      ledRing.LEDRingSmall_Set_GREEN(g, 0);
+      g = g + 1;
+      if (g >= 24)
+        g = 0;
+      ledRing.LEDRingSmall_Set_GREEN(g, 0xFF);
+    }
+
+    if ((tim % 8) == 0) {
+      ledRing.LEDRingSmall_Set_BLUE(b, 0);
+      b = b + 1;
+      if (b >= 24)
+        b = 0;
+      ledRing.LEDRingSmall_Set_BLUE(b, 0xFF);
+    }
+
+
+    if ((tim % 7) == 0) {
+      ledRing.LEDRingSmall_Set_BLUE(br, 0);
+      ledRing.LEDRingSmall_Set_RED(br, 0);
+      br = br + 1;
+      if (br >= 24)
+        br = 0;
+      ledRing.LEDRingSmall_Set_BLUE(br, 0xFF);
+      ledRing.LEDRingSmall_Set_RED(br, 0xFF);
+    }
+
+
+    if ((tim % 10) == 0) {
+      ledRing.LEDRingSmall_Set_BLUE(bg, 0);
+      ledRing.LEDRingSmall_Set_GREEN(bg, 0);
+      bg = bg + 1;
+      if (bg >= 24)
+        bg = 0;
+      ledRing.LEDRingSmall_Set_BLUE(bg, 0xFF);
+      ledRing.LEDRingSmall_Set_GREEN(bg, 0xFF);
+    }
+
+    if ((tim % 11) == 0) {
+      ledRing.LEDRingSmall_Set_RED(rg, 0);
+      ledRing.LEDRingSmall_Set_GREEN(rg, 0);
+      rg = rg + 1;
+      if (rg >= 24)
+        rg = 0;
+      ledRing.LEDRingSmall_Set_RED(rg, 0xFF);
+      ledRing.LEDRingSmall_Set_GREEN(rg, 0xFF);
+    }
+
+    delay(10);
+  }
+
+
+  for (tim = 0; tim < 100; tim++) {
+    j = tim % 24;
+
+    for (i = 0; i < 24; i++) {
+      ledRing.LEDRingSmall_Set_RGB(i, fade1_table[j]);
+      j++;
+      if (j >= 24)
+        j = 0;
+    }
+    delay(40);
+  }
+
+  for (tim = 0; tim < 100; tim++) {
+    j = tim % 24;
+    for (i = 0; i < 24; i++) {
+      ledRing.LEDRingSmall_Set_RGB(i, fade2_table[j]);
+      j++;
+      if (j >= 24)
+        j = 0;
+    }
+    delay(40);
+  }
+
+  for (i = 0xff; i > 0; i--) {
+
+    ledRing.LEDRingSmall_GlobalCurrent(i);
+    delay(20);
+  }
+  ledRing.LEDRingSmall_ClearAll();
+  ledRing.LEDRingSmall_GlobalCurrent(0xff);
+*/
