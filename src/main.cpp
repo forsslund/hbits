@@ -29,6 +29,10 @@ BluetoothMIDI_Interface midi;
 // Pin definitions
 const uint8_t FSR_PIN = 19;  // Force Sensitive Resistor pin
 
+// Motor pin definitions
+const uint8_t MOTOR_PINS[4] = {9, 10, 17, 18};  // GPIO pins for motors
+const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
+
 // MIDI CC control for FSR
 #ifdef HAS_FSR
 CCPotentiometer fsr {
@@ -148,6 +152,16 @@ void setup(void) {
   Serial.println(F("DRV2605L haptic driver disabled"));
 #endif
 
+
+  // Initialize PWM channels for motors
+  Serial.println(F("Initializing PWM for motors..."));
+  for (int i = 0; i < 4; i++) {
+    ledcSetup(PWM_CHANNELS[i], 1000, 8); // 1kHz, 8-bit resolution
+    ledcAttachPin(MOTOR_PINS[i], PWM_CHANNELS[i]);
+    ledcWrite(PWM_CHANNELS[i], 0); // Start with motors off
+  }
+  Serial.println(F("PWM channels initialized"));
+
   Control_Surface.begin(); // Initialize Control Surface
   
   Serial.println(F("Control Surface initialized"));
@@ -157,10 +171,37 @@ void setup(void) {
 int oldValue = 0;
 void loop() {
     //Serial.println(F("Loop"));
-    digitalWrite(LED_BUILTIN, blink);
-    blink = !blink;
+    digitalWrite(LED_BUILTIN, 1);
+    //blink = !blink;
+    Serial.print(F("Inflate! "));
+    ledcWrite(PWM_CHANNELS[0], 255); // 9
+    ledcWrite(PWM_CHANNELS[1], 0);   // 10
+    ledcWrite(PWM_CHANNELS[2], 255); // 11
+    ledcWrite(PWM_CHANNELS[3], 0);   // 12
 
-  
+    delay(1000);
+    Serial.print(F("1 "));
+    delay(1000);
+    Serial.print(F(" 2 "));
+    delay(1000);
+    Serial.println(F(" 3 "));
+
+    digitalWrite(LED_BUILTIN, 0);
+    Serial.print(F("Deflate! "));
+
+    ledcWrite(PWM_CHANNELS[0], 0);    // 9
+    ledcWrite(PWM_CHANNELS[1], 255);  // 10
+    ledcWrite(PWM_CHANNELS[2], 0);    // 11
+    ledcWrite(PWM_CHANNELS[3], 255);  // 12
+
+    delay(1000);
+    Serial.print(F("1 "));
+    delay(1000);
+    Serial.print(F(" 2 "));
+    delay(1000);
+    Serial.println(F(" 3 "));
+
+  /*
   ledRing.LEDRingSmall_GlobalCurrent(0x10);
   ledRing.LEDRingSmall_PWM_MODE();
 
@@ -200,5 +241,5 @@ void loop() {
         Serial.println(F("V"));
     }
     #endif
-
+*/
 }
