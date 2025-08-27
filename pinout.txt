@@ -1,6 +1,31 @@
 ESP32 nano Compatible
 
-Pin 
+NEW
+
+Pin (GPIO)
+21   CLK  Incremental encoder A
+38   DT   Incremental encoder B
+47   D12   Encoder Switch
+11   SDA  I2c
+12   SCL  I2c
+1    A0   Force Sensitive Resistor
+18   D9   Mosfet PWM control 1
+17   D8   Mosfet PWM control 2
+10   D7   Mosfet PWM control 3
+9    D6   Mosfet PWM control 4
+
+I2C to 
+- LED Ring
+- Haptic driver
+- USB C PD (not really used) --> maybe for Current control
+
+MOSFET Motor pinout
+const uint8_t MOTOR_PINS[4] = {18, 17, 10, 9};  // GPIO pins for motors
+
+
+OLD
+
+Pin (GPIO)
 5   CLK  Incremental encoder A
 6   DT   Incremental encoder B
 23  SDA  I2c
@@ -15,5 +40,3 @@ I2C to
 - LED Ring
 - Haptic driver
 - USB C PD (not really used)
-
-
