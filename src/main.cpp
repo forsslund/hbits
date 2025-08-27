@@ -46,15 +46,16 @@ const uint8_t led_count = 24;
 
 // Instantiate a CCAbsoluteEncoder object
 CCAbsoluteEncoder enc {
-  {5, 6},       // pins
+  {21, 38},     // pins
   MIDI_CC::Pan, // MIDI address (CC number + optional channel)
-  1,            // optional multiplier if the control isn't fast enough
+  1,           // optional multiplier if the control isn't fast enough
 };
  
 
 
 
-LEDRingSmall ledRing(ISSI3746_SJ1 | ISSI3746_SJ5);//Only SJ2 and SJ7 are soldered in this example
+//LEDRingSmall ledRing(ISSI3746_SJ1 | ISSI3746_SJ5);//Only SJ2 and SJ7 are soldered in this example
+LEDRingSmall ledRing(ISSI3746_SJ2 | ISSI3746_SJ7);//Only SJ2 and SJ7 are soldered in this example
 // Also check if there are the pull-UP resistors on the I2C bus. If no or the board doesn't want to work please also solder the jumper SJ9
 
 int blink=0;
@@ -162,6 +163,10 @@ void setup(void) {
   }
   Serial.println(F("PWM channels initialized"));
 
+  // Set custom Bluetooth MIDI device name (must be called before Control_Surface.begin())
+  midi.setName("HBITS Vibe 1");
+  Serial.println(F("Bluetooth device name set to: HBITS Vibe 1"));
+
   Control_Surface.begin(); // Initialize Control Surface
   
   Serial.println(F("Control Surface initialized"));
@@ -217,7 +222,7 @@ void loop() {
     num=24;
   }
   for (uint8_t i = 0; i < 24; i++) {
-    ledRing.LEDRingSmall_Set_RED(i, i<num*(24.0/20.0)?0xff:0x00);
+    ledRing.LEDRingSmall_Set_RED(i, i<num?0xff:0x00);
   }
 
     Control_Surface.loop(); // Update the Control Surface
