@@ -26,8 +26,6 @@ const long analogInterval = 100;  // interval for analog reading (milliseconds)
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
 
-// Pin definitions
-const uint8_t FSR_PIN = 19;  // Force Sensitive Resistor pin
 
 // Motor pin definitions
 const uint8_t MOTOR_PINS[4] = {9, 10, 17, 18};  // GPIO pins for motors
@@ -36,8 +34,8 @@ const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
 // MIDI CC control for FSR
 #ifdef HAS_FSR
 CCPotentiometer fsr {
-    A0,//FSR_PIN,           // Analog pin
-    {0x07},           // CC 7 = Volume
+    A0,           // Analog pin
+    {0x07},       // CC 7 = Volume
 };
 #endif
 
