@@ -5,11 +5,11 @@
 #include "LEDRingSmall.h"
 
 // Configuration flags - set to false if hardware not present
-constexpr bool HAS_DRV2605 = false;  // Set to false if no haptic driver
-constexpr bool HAS_FSR = false;  // Set to false if no haptic driver
-constexpr bool HAS_PUMP = false;  
+#define HAS_DRV2605 // Set to false if no haptic driver
+#define HAS_FSR  // Set to false if no haptic driver
+//#define HAS_PUMP
 
-#if HAS_DRV2605
+#ifdef HAS_DRV2605
 #include <Adafruit_DRV2605.h>
 // Initialize DRV2605L
 Adafruit_DRV2605 drv;
@@ -125,7 +125,7 @@ void setup(void) {
   
   Serial.println(F("LED Ring initialization complete"));
 
-#if HAS_DRV2605
+#ifdef HAS_DRV2605
   // Initialize DRV2605L
   Serial.println("Initializing DRV2605L...");
   if (!drv.begin()) {
