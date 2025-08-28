@@ -150,7 +150,7 @@ void setup(void) {
   Serial.println(F("DRV2605L haptic driver disabled"));
 #endif
 
-
+#ifdef HAS_PUMP
   // Initialize PWM channels for motors
   Serial.println(F("Initializing PWM for motors..."));
   for (int i = 0; i < 4; i++) {
@@ -159,6 +159,7 @@ void setup(void) {
     ledcWrite(PWM_CHANNELS[i], 0); // Start with motors off
   }
   Serial.println(F("PWM channels initialized"));
+#endif
 
   // Set custom Bluetooth MIDI device name (must be called before Control_Surface.begin())
   midi.setName("HBITS Vibe 1");
