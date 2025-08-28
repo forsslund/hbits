@@ -5,9 +5,9 @@
 #include "LEDRingSmall.h"
 
 // Configuration flags - comment out if hardware not present
-#define HAS_DRV2605 // comment out if no haptic driver
-#define HAS_FSR  // comment out if no haptic driver
-//#define HAS_PUMP
+#define HAS_DRV2605   // comment out if no haptic driver
+#define HAS_FSR       // comment out if no FSR sensor
+//#define HAS_PUMP    // comment out if no pumps/valves
 
 #ifdef HAS_DRV2605
 #include <Adafruit_DRV2605.h>
@@ -17,7 +17,7 @@ Adafruit_DRV2605 drv;
 
 #ifdef HAS_PUMP
 // Motor pin definitions
-const uint8_t MOTOR_PINS[4] = {9, 10, 17, 18};  // GPIO pins for motors
+const uint8_t MOTOR_PINS[4] = {18, 17, 10, 9};  // GPIO pins for motors {9, 10, 17, 18};
 const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
 #endif
 
@@ -354,10 +354,10 @@ void loop() {
     digitalWrite(LED_BUILTIN, 1);
     //blink = !blink;
     Serial.print(F("Inflate! "));
-    ledcWrite(PWM_CHANNELS[0], 255); // 9
-    ledcWrite(PWM_CHANNELS[1], 0);   // 10
-    ledcWrite(PWM_CHANNELS[2], 255); // 11
-    ledcWrite(PWM_CHANNELS[3], 0);   // 12
+    ledcWrite(PWM_CHANNELS[0], 255); // M1 pump inflate (GPIO 18)
+    ledcWrite(PWM_CHANNELS[1], 0);   // M2 pump deflate (GPIO 17)
+    ledcWrite(PWM_CHANNELS[2], 255); // M3 valve inflate (GPIO 10)
+    ledcWrite(PWM_CHANNELS[3], 0);   // M4 vlalve deflate (GPIO 9)
 
     delay(1000);
     Serial.print(F("1 "));
@@ -369,10 +369,10 @@ void loop() {
     digitalWrite(LED_BUILTIN, 0);
     Serial.print(F("Deflate! "));
 
-    ledcWrite(PWM_CHANNELS[0], 0);    // 9
-    ledcWrite(PWM_CHANNELS[1], 255);  // 10
-    ledcWrite(PWM_CHANNELS[2], 0);    // 11
-    ledcWrite(PWM_CHANNELS[3], 255);  // 12
+    ledcWrite(PWM_CHANNELS[0], 0);    // M1 pump inflate (GPIO 18)
+    ledcWrite(PWM_CHANNELS[1], 255);  // M2 pump deflate (GPIO 17)
+    ledcWrite(PWM_CHANNELS[2], 0);    // M3 valve inflate (GPIO 10)
+    ledcWrite(PWM_CHANNELS[3], 255);  // M4 vlalve deflate (GPIO 9)
 
     delay(1000);
     Serial.print(F("1 "));
