@@ -4,15 +4,29 @@
 #include <Adafruit_DRV2605.h>
 #include "LEDRingSmall.h"
 
-// Configuration flags - set to false if hardware not present
-#define HAS_DRV2605 // Set to false if no haptic driver
-#define HAS_FSR  // Set to false if no haptic driver
+// Configuration flags - comment out if hardware not present
+#define HAS_DRV2605 // comment out if no haptic driver
+#define HAS_FSR  // comment out if no haptic driver
 //#define HAS_PUMP
 
 #ifdef HAS_DRV2605
 #include <Adafruit_DRV2605.h>
 // Initialize DRV2605L
 Adafruit_DRV2605 drv;
+#endif
+
+#ifdef HAS_PUMP
+// Motor pin definitions
+const uint8_t MOTOR_PINS[4] = {9, 10, 17, 18};  // GPIO pins for motors
+const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
+#endif
+
+// MIDI CC control for FSR
+#ifdef HAS_FSR
+CCPotentiometer fsr {
+    A0,           // Analog pin
+    {0x07},       // CC 7 = Volume
+};
 #endif
 
 // Variables for LED blinking
@@ -26,19 +40,6 @@ const long analogInterval = 100;  // interval for analog reading (milliseconds)
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
 
-
-// Motor pin definitions
-const uint8_t MOTOR_PINS[4] = {9, 10, 17, 18};  // GPIO pins for motors
-const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
-
-// MIDI CC control for FSR
-#ifdef HAS_FSR
-CCPotentiometer fsr {
-    A0,           // Analog pin
-    {0x07},       // CC 7 = Volume
-};
-#endif
-
 // Number of LEDs in the ring
 const uint8_t led_count = 24;
 
@@ -50,9 +51,7 @@ CCAbsoluteEncoder enc {
 };
  
 
-
-
-//LEDRingSmall ledRing(ISSI3746_SJ1 | ISSI3746_SJ5);//Only SJ2 and SJ7 are soldered in this example
+//LEDRingSmall ledRing(ISSI3746_SJ1 | ISSI3746_SJ5);//no jumpers are soldered in this example
 LEDRingSmall ledRing(ISSI3746_SJ2 | ISSI3746_SJ7);//Only SJ2 and SJ7 are soldered in this example
 // Also check if there are the pull-UP resistors on the I2C bus. If no or the board doesn't want to work please also solder the jumper SJ9
 
