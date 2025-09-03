@@ -319,6 +319,15 @@ CCAbsoluteEncoder enc {
 LEDRingSmall ledRing(ISSI3746_SJ2 | ISSI3746_SJ7);//Only SJ2 and SJ7 are soldered in this example
 // Also check if there are the pull-UP resistors on the I2C bus. If no or the board doesn't want to work please also solder the jumper SJ9
 
+
+
+void updateLedRing(int effectIndex) {
+  for (uint8_t i = 0; i < 24; i++) {
+    // Set LED color based on effect index (1 step = 1 additional led light)
+    ledRing.LEDRingSmall_Set_RED(i, i >= effectIndex * 4 && i < (effectIndex + 1) * 4 ? 0xff : 0x00);
+  }
+}
+
 int blink=0;
 void setup(void) {
   // Initialize serial communication
@@ -399,9 +408,9 @@ void setup(void) {
   
   // Set initial haptic volume
   player.setVolume(hapticVolume);
-  
-  // Start with the pulse purr effect
-  player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE_PURR));
+
+  // Start with the constant vibe effect
+  player.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
   
   // Start the background haptic task
   player.start();
@@ -430,6 +439,7 @@ void setup(void) {
   
   Serial.println(F("Control Surface initialized"));
 
+  updateLedRing(0);
 }
 
 int oldValue = 0;
@@ -473,50 +483,60 @@ void loop() {
 
   // Use encoder to switch haptic effects
   int num = enc.getValue();
+  // Rotate
+  num=num%24;
+
   if(num!=oldValue){
     Serial.print(F("Encoder value: "));
     Serial.println(num);
     
     #ifdef HAS_DRV2605
-    // Map encoder value to different effects (0-24 -> 0-5 effects)
-    int effectIndex = map(num, 0, 24, 0, 5);
-    effectIndex = constrain(effectIndex, 0, 5);
+    // Map encoder value to different effects (0-23 -> 0-5 effects)
+    // Use integer division for even distribution: 4 steps per effect
+    int effectIndex = num / 4;
     
-    switch(effectIndex) {
-      case 0:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE_PURR));
-        Serial.println(F("Effect: PULSE_PURR"));
-        break;
-      case 1:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE));
-        Serial.println(F("Effect: PULSE"));
-        break;
-      case 2:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_RAMP_UP));
-        Serial.println(F("Effect: RAMP_UP"));
-        break;
-      case 3:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_TWO_PULSE));
-        Serial.println(F("Effect: TWO_PULSE"));
-        break;
-      case 4:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_STRONG_BUZZ));
-        Serial.println(F("Effect: STRONG_BUZZ"));
-        break;
-      case 5:
-        player.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
-        Serial.println(F("Effect: CONST_VIBE"));
-        break;
+    int oldEffectIndex = oldValue / 4;
+
+    if(oldEffectIndex != effectIndex){    
+      switch(effectIndex) {
+        case 0:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
+          Serial.println(F("Effect: 0. CONST_VIBE"));      
+          break;
+        case 1:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE));
+          Serial.println(F("Effect: 1. PULSE"));
+          break;
+        case 2:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_RAMP_UP));
+          Serial.println(F("Effect: 2. RAMP_UP"));
+          break;
+        case 3:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_TWO_PULSE));
+          Serial.println(F("Effect: 3. TWO_PULSE"));
+          break;
+        case 4:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_STRONG_BUZZ));
+          Serial.println(F("Effect: 4. STRONG_BUZZ"));
+          break;
+        case 5:
+          player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE_PURR));
+          Serial.println(F("Effect: 5. PULSE_PURR"));
+          break;
+      }
     }
     #endif
     
     oldValue = num;
+    updateLedRing(effectIndex);
   }
   if(num>24){
     num=24;
   }
+
   for (uint8_t i = 0; i < 24; i++) {
-    ledRing.LEDRingSmall_Set_RED(i, i<num?0xff:0x00);
+    // Set LED color based on encoder value (1 step = 1 additional led light)
+    //ledRing.LEDRingSmall_Set_RED(i, i<num?0xff:0x00);    
   }
 
     Control_Surface.loop(); // Update the Control Surface
@@ -544,19 +564,15 @@ void loop() {
         #endif
         
         // Output to terminal with haptic debug info
-        Serial.print(F("A0 Raw through fsr: "));
-        Serial.print(rawValue);
-
-        Serial.print(F("=Volume: "));
-        Serial.print(newVolume);
-
-        
-        #ifdef HAS_DRV2605
-        Serial.print(F("  Haptic: "));
-        Serial.print(player.getLastSetRealtimeValue());
-        #endif
-        
-        Serial.println();
+        //Serial.print(F("A0 Raw through fsr: "));
+        //Serial.print(rawValue);
+        //Serial.print(F("=Volume: "));
+        //Serial.print(newVolume);        
+        //#ifdef HAS_DRV2605
+        //Serial.print(F("  Haptic: "));
+        //Serial.print(player.getLastSetRealtimeValue());
+        //#endif        
+        //Serial.println();
     }
     #endif
 #endif
