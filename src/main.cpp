@@ -59,7 +59,7 @@ const HapticEffect EFFECT_PULSE_PURR = {
   {12, 10}, {0, 10}, 
   {12, 10}, {0, 10},
   {12, 10}, {0, 10}, 
-  {6, 10}, {0, 1000},
+  {6, 10}, {0, 100},
 };
 
 const HapticEffect EFFECT_PULSE = {
@@ -87,7 +87,7 @@ const HapticEffect EFFECT_PULSE = {
   {12, 10}, {12, 10}, 
   {12, 10}, {12, 10},
   {12, 10}, {12, 10}, 
-  {6, 10}, {6, 1000},
+  {6, 10}, {6, 100},
 };
 
 const HapticEffect EFFECT_RAMP_UP = {
