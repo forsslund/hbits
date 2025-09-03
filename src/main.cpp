@@ -3,6 +3,8 @@
 #include <Wire.h>
 #include <Adafruit_DRV2605.h>
 #include "LEDRingSmall.h"
+#include <vector>
+#include <memory>
 
 // Configuration flags - comment out if hardware not present
 #define HAS_DRV2605   // comment out if no haptic driver
@@ -14,7 +16,7 @@
 // Initialize DRV2605L
 Adafruit_DRV2605 drv;
 
-float hapticVolume = 0.5;  // Default volume (0.0 to 1.0)
+float hapticVolume = 1.0;  // Default volume (0.0 to 1.0)
 
 struct HapticStep {
     uint8_t amplitude; // 0-255
@@ -162,10 +164,91 @@ const HapticEffect EFFECT_STRONG_BUZZ = {
   {0, 10}, {0, 10},
 };
 
-const HapticEffect EFFECT_CONST_VIBE[][2] = {
-  {127, 10},
-
+const HapticEffect EFFECT_CONST_VIBE = {
+  {127, 10}
 };
+
+// ----- HapticPlayer class -----
+class HapticPlayer {
+public:
+    HapticPlayer(Adafruit_DRV2605& drvRef, BaseType_t core = 0)
+        : drv(drvRef), coreId(core), hapticVolume(1.0f), lastRealtimeValue(0) {
+        // Start with empty effect
+        currentEffect = std::make_shared<HapticEffect>();
+    }
+
+    void start() {
+        // Set DRV to realtime mode for continuous playback
+        drv.setMode(DRV2605_MODE_REALTIME);
+        drv.useLRA();
+        
+        Serial.println(F("Starting haptic background task..."));
+        
+        xTaskCreatePinnedToCore(
+            [](void* param) {
+                auto self = static_cast<HapticPlayer*>(param);
+                Serial.println(F("Haptic task started on core 0"));
+                
+                while (true) {
+                    auto effect = self->currentEffect; // Get current effect (atomic)
+                    
+                    if (effect && !effect->empty()) {
+                        // Play through the entire effect
+                        for (const auto& step : *effect) {
+                            // Scale amplitude by volume
+                            uint8_t scaledAmp = static_cast<uint8_t>(step.amplitude * self->hapticVolume);
+                            self->drv.setRealtimeValue(scaledAmp);
+                            self->lastRealtimeValue = scaledAmp;  // Store the value for debug access
+                            
+                            vTaskDelay(pdMS_TO_TICKS(step.delayMs));
+                        }
+                    } else {
+                        // No effect or empty effect, just wait
+                        self->drv.setRealtimeValue(0);
+                        self->lastRealtimeValue = 0;  // Store the value for debug access
+                        vTaskDelay(pdMS_TO_TICKS(100));
+                    }
+                }
+            },
+            "HapticTask",
+            4096,  // Stack size
+            this,
+            1,     // Priority
+            nullptr,
+            coreId
+        );
+    }
+
+    void setEffect(std::shared_ptr<HapticEffect> effect) {
+        currentEffect = effect; // Atomic pointer assignment
+        Serial.println(F("Haptic effect changed"));
+    }
+
+    void setVolume(float vol) {
+        hapticVolume = constrain(vol, 0.0f, 1.0f);
+        //Serial.print(F("Haptic volume set to: "));
+        //Serial.println(hapticVolume);
+    }
+
+    float getVolume() const {
+        return hapticVolume;
+    }
+
+    uint8_t getLastSetRealtimeValue() const {
+        return lastRealtimeValue;
+    }
+
+private:
+    Adafruit_DRV2605& drv;
+    BaseType_t coreId;
+    volatile float hapticVolume;
+    volatile uint8_t lastRealtimeValue;
+    std::shared_ptr<HapticEffect> currentEffect;
+};
+
+// Global haptic player instance
+HapticPlayer player(drv, 0);
+
 #endif
 
 #ifdef HAS_PUMP
@@ -189,7 +272,7 @@ const long interval = 100;  // interval at which to blink (milliseconds)
 
 // Variables for analog reading
 unsigned long previousAnalogMillis = 0;
-const long analogInterval = 100;  // interval for analog reading (milliseconds)
+const long analogInterval = 200;  // interval for analog reading (milliseconds)
 
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
@@ -285,21 +368,18 @@ void setup(void) {
     while (1);
   }
   
-  // Set the library to use External trigger mode
-  drv.setMode(DRV2605_MODE_INTTRIG);
-  
-  // Set up a test pattern
-  drv.selectLibrary(1);
-  drv.setWaveform(0, 1);  // Strong click
-  drv.setWaveform(1, 13); // Double click
-  drv.setWaveform(2, 14); // Short buzz 
-  drv.setWaveform(3, 0);  // End pattern
-
-  // Play the pattern
-  drv.go();
-  delay(1000);  // Wait for pattern to complete
-
   Serial.println(F("DRV2605L haptic driver initialized"));
+  
+  // Set initial haptic volume
+  player.setVolume(hapticVolume);
+  
+  // Start with the pulse purr effect
+  player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE_PURR));
+  
+  // Start the background haptic task
+  player.start();
+  
+  Serial.println(F("Haptic system ready"));
 #else
   Serial.println(F("DRV2605L haptic driver disabled"));
 #endif
@@ -364,10 +444,45 @@ void loop() {
   ledRing.LEDRingSmall_GlobalCurrent(0x10);
   ledRing.LEDRingSmall_PWM_MODE();
 
+  // Use encoder to switch haptic effects
   int num = enc.getValue();
   if(num!=oldValue){
     Serial.print(F("Encoder value: "));
     Serial.println(num);
+    
+    #ifdef HAS_DRV2605
+    // Map encoder value to different effects (0-24 -> 0-5 effects)
+    int effectIndex = map(num, 0, 24, 0, 5);
+    effectIndex = constrain(effectIndex, 0, 5);
+    
+    switch(effectIndex) {
+      case 0:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE_PURR));
+        Serial.println(F("Effect: PULSE_PURR"));
+        break;
+      case 1:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_PULSE));
+        Serial.println(F("Effect: PULSE"));
+        break;
+      case 2:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_RAMP_UP));
+        Serial.println(F("Effect: RAMP_UP"));
+        break;
+      case 3:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_TWO_PULSE));
+        Serial.println(F("Effect: TWO_PULSE"));
+        break;
+      case 4:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_STRONG_BUZZ));
+        Serial.println(F("Effect: STRONG_BUZZ"));
+        break;
+      case 5:
+        player.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
+        Serial.println(F("Effect: CONST_VIBE"));
+        break;
+    }
+    #endif
+    
     oldValue = num;
   }
   if(num>24){
@@ -379,25 +494,36 @@ void loop() {
 
     Control_Surface.loop(); // Update the Control Surface
 
-    // Read analog value from A0 every 100ms
+    // Read analog value from A0 every 100ms and control haptic volume
     #ifdef HAS_FSR
     unsigned long currentMillis = millis();
     if (currentMillis - previousAnalogMillis >= analogInterval) {
         previousAnalogMillis = currentMillis;
         
         // Read raw ADC value (0-1023 for 10-bit ADC)
-        //int rawValue = analogRead(ANALOG_PIN);
         int rawValue = fsr.getRawValue();
         
-        // Convert to voltage (assuming 3.3V reference)
-        float voltage = (rawValue / 1023.0) * 3.3;
+        #ifdef HAS_DRV2605
+        // Map FSR pressure to haptic volume (0-8200 -> 0.0-1.0)
+        float newVolume = map(rawValue, 0, 8200, 0, 100) / 100.0f;
+        newVolume = constrain(newVolume, 0.0f, 1.0f);
         
-        // Output to terminal
+        // Only update if volume changed significantly (avoid constant updates)
+        if (abs(newVolume - player.getVolume()) > 0.05f) {
+          //player.setVolume(newVolume);
+        }
+        #endif
+        
+        // Output to terminal with haptic debug info
         Serial.print(F("A0 Raw through fsr: "));
         Serial.print(rawValue);
-        Serial.print(F("  Voltage: "));
-        Serial.print(voltage, 3);  // 3 decimal places
-        Serial.println(F("V"));
+        
+        #ifdef HAS_DRV2605
+        Serial.print(F("  Haptic: "));
+        Serial.print(player.getLastSetRealtimeValue());
+        #endif
+        
+        Serial.println();
     }
     #endif
 #endif
