@@ -322,9 +322,24 @@ LEDRingSmall ledRing(ISSI3746_SJ2 | ISSI3746_SJ7);//Only SJ2 and SJ7 are soldere
 
 
 void updateLedRing(int effectIndex) {
+  // Rainbow colors for each effect (6 colors for 6 effects)
+  uint32_t rainbowColors[6] = {
+    0xFF0000, // Red - Effect 0 (CONST_VIBE)
+    0xFF8000, // Orange - Effect 1 (PULSE)  
+    0xFFFF00, // Yellow - Effect 2 (RAMP_UP)
+    0x00FF00, // Green - Effect 3 (TWO_PULSE)
+    0x0080FF, // Blue - Effect 4 (STRONG_BUZZ)
+    0x8000FF  // Purple - Effect 5 (PULSE_PURR)
+  };
+  
   for (uint8_t i = 0; i < 24; i++) {
-    // Set LED color based on effect index (1 step = 1 additional led light)
-    ledRing.LEDRingSmall_Set_RED(i, i >= effectIndex * 4 && i < (effectIndex + 1) * 4 ? 0xff : 0x00);
+    if (i >= effectIndex * 4 && i < (effectIndex + 1) * 4) {
+      // Light up the 4 LEDs for current effect with rainbow color
+      ledRing.LEDRingSmall_Set_RGB(i, rainbowColors[effectIndex]);
+    } else {
+      // Turn off other LEDs
+      ledRing.LEDRingSmall_Set_RGB(i, 0x000000);
+    }
   }
 }
 
