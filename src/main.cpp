@@ -289,7 +289,7 @@ const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
 #ifdef HAS_FSR
 CCPotentiometer fsr {
     A0,           // Analog pin
-    {0x07},       // CC 7 = Volume
+    {0x16},       // CC 22 (0x16 in hex)
 };
 #endif
 
