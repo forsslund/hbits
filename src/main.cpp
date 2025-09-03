@@ -26,7 +26,7 @@ uint8_t olPeriodFromHz(float f) {
   return (uint8_t)v;
 }
 
-float hapticVolume = 1.0;  // Default volume (0.0 to 1.0)
+float hapticVolume = 0.0;  // Default volume (0.0 to 1.0)
 
 struct HapticStep {
     uint8_t amplitude; // 0-255
@@ -299,7 +299,7 @@ const long interval = 100;  // interval at which to blink (milliseconds)
 
 // Variables for analog reading
 unsigned long previousAnalogMillis = 0;
-const long analogInterval = 200;  // interval for analog reading (milliseconds)
+const long analogInterval = 50;  // interval for analog reading (milliseconds)
 
 // Create a MIDI interface for sending MIDI messages
 BluetoothMIDI_Interface midi;
@@ -532,18 +532,24 @@ void loop() {
         
         #ifdef HAS_DRV2605
         // Map FSR pressure to haptic volume (0-8200 -> 0.0-1.0)
+        // Note: the FSR reading value is mathematically improved by Control Surface
+        //       library to allow for a larger range. We have seen values up above 10000.
         float newVolume = map(rawValue, 0, 8200, 0, 100) / 100.0f;
         newVolume = constrain(newVolume, 0.0f, 1.0f);
         
         // Only update if volume changed significantly (avoid constant updates)
         if (abs(newVolume - player.getVolume()) > 0.05f) {
-          //player.setVolume(newVolume);
+          player.setVolume(newVolume);
         }
         #endif
         
         // Output to terminal with haptic debug info
         Serial.print(F("A0 Raw through fsr: "));
         Serial.print(rawValue);
+
+        Serial.print(F("=Volume: "));
+        Serial.print(newVolume);
+
         
         #ifdef HAS_DRV2605
         Serial.print(F("  Haptic: "));
