@@ -59,8 +59,17 @@ private:
     serial.print("  Uptime: ");
     serial.print(millis() / 1000);
     serial.println(" seconds");
-    serial.println("  Bluetooth MIDI: Connected");
+    
+    // Check actual Bluetooth connection status
+    serial.print("  Bluetooth MIDI: ");
+    if (midiInterface.isConnected()) {
+      serial.println("Connected");
+    } else {
+      serial.println("Disconnected");
+    }
+    
     serial.println("  USB Debug MIDI: Active");
+    serial.println("  FSR Haptic Control: Standalone (no BT dependency)");
   }
 
   void printHelp() {
