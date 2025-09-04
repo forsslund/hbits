@@ -2,6 +2,8 @@
 #include <Control_Surface.h>
 #include "hapticplayer.h"
 #include "cli.h"
+#include "encoder.h"
+#include "ledcontrol.h"
 
 // MIDI Interface
 BluetoothMIDI_Interface midibt;
@@ -11,6 +13,10 @@ HapticPlayer hapticPlayer;
 
 // CLI Interface
 CLI commandInterface(Serial, midibt);
+
+// Encoder and LED Controller
+EffectEncoder effectEncoder;
+LEDController ledController;
 
 // FSR Input Element
 CCPotentiometer fsr {
@@ -98,6 +104,15 @@ void setup() {
     // Route 3: Bluetooth → HapticSink (external MIDI control of haptics)
     midibt >> pipeFactory >> hapticSink;
     
+    // Set Bluetooth device name
+    midibt.setName("HBITS Vibe 1");
+    
+    // Initialize LED controller
+    ledController.begin();
+    
+    // Initialize encoder
+    effectEncoder.begin();
+    
     // Initialize the Control Surface system
     Control_Surface.begin();
     
@@ -119,6 +134,16 @@ void setup() {
 void loop() {
     // Update all MIDI processing and routing
     Control_Surface.loop();
+    
+    // Handle encoder for effect switching
+    int newEffect = effectEncoder.update();
+    if (newEffect >= 0) {
+        hapticPlayer.setEffect(effectEncoder.getEffect(newEffect));
+        ledController.updateDisplay(newEffect);
+    }
+    
+    // Refresh LED display
+    ledController.refresh();
     
     // Handle CLI interface
     commandInterface.update();
