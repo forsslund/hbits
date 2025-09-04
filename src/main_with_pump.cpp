@@ -1,3 +1,4 @@
+#ifdef PUMP
 #include <Arduino.h>
 #include <Control_Surface.h>
 #include <Wire.h>
@@ -9,8 +10,9 @@
 #include "hapticeffects.h"
 
 // Configuration flags - comment out if hardware not present
-#define HAS_DRV2605   // comment out if no haptic driver
-#define HAS_FSR       // comment out if no FSR sensor
+//#define HAS_DRV2605   // comment out if no haptic driver
+//#define HAS_FSR       // comment out if no FSR sensor
+#define HAS_PUMP    // comment out if no pumps/valves
 
 #ifdef HAS_DRV2605
 #include <Adafruit_DRV2605.h>
@@ -128,6 +130,13 @@ private:
 HapticPlayer player(drv, 0);
 
 #endif
+
+#ifdef HAS_PUMP
+// Motor pin definitions
+const uint8_t MOTOR_PINS[4] = {18, 17, 10, 9};  // GPIO pins for motors {9, 10, 17, 18};
+const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
+#endif
+
 
 // MIDI CC control for FSR
 #ifdef HAS_FSR
@@ -266,6 +275,17 @@ void setup(void) {
   Serial.println(F("DRV2605L haptic driver disabled"));
 #endif
 
+#ifdef HAS_PUMP
+  // Initialize PWM channels for motors
+  Serial.println(F("Initializing PWM for motors..."));
+  for (int i = 0; i < 4; i++) {
+    ledcSetup(PWM_CHANNELS[i], 1000, 8); // 1kHz, 8-bit resolution
+    ledcAttachPin(MOTOR_PINS[i], PWM_CHANNELS[i]);
+    ledcWrite(PWM_CHANNELS[i], 0); // Start with motors off
+  }
+  Serial.println(F("PWM channels initialized"));
+#endif
+
   // Set custom Bluetooth MIDI device name (must be called before Control_Surface.begin())
   midi.setName("HBITS Vibe 1");
   Serial.println(F("Bluetooth device name set to: HBITS Vibe 1"));
@@ -279,6 +299,38 @@ void setup(void) {
 
 int oldValue = 0;
 void loop() {
+  #ifdef HAS_PUMP
+    //Serial.println(F("Loop"));
+    digitalWrite(LED_BUILTIN, 1);
+    //blink = !blink;
+    Serial.print(F("Inflate! "));
+    ledcWrite(PWM_CHANNELS[0], 255); // M1 pump inflate (GPIO 18)
+    ledcWrite(PWM_CHANNELS[1], 0);   // M2 pump deflate (GPIO 17)
+    ledcWrite(PWM_CHANNELS[2], 255); // M3 valve inflate (GPIO 10)
+    ledcWrite(PWM_CHANNELS[3], 0);   // M4 vlalve deflate (GPIO 9)
+
+    delay(1000);
+    Serial.print(F("1 "));
+    delay(1000);
+    Serial.print(F(" 2 "));
+    delay(1000);
+    Serial.println(F(" 3 "));
+
+    digitalWrite(LED_BUILTIN, 0);
+    Serial.print(F("Deflate! "));
+
+    ledcWrite(PWM_CHANNELS[0], 0);    // M1 pump inflate (GPIO 18)
+    ledcWrite(PWM_CHANNELS[1], 255);  // M2 pump deflate (GPIO 17)
+    ledcWrite(PWM_CHANNELS[2], 0);    // M3 valve inflate (GPIO 10)
+    ledcWrite(PWM_CHANNELS[3], 255);  // M4 vlalve deflate (GPIO 9)
+
+    delay(1000);
+    Serial.print(F("1 "));
+    delay(1000);
+    Serial.print(F(" 2 "));
+    delay(1000);
+    Serial.println(F(" 3 "));
+#else
   ledRing.LEDRingSmall_GlobalCurrent(0x10);
   ledRing.LEDRingSmall_PWM_MODE();
 
@@ -376,5 +428,6 @@ void loop() {
         //Serial.println();
     }
     #endif
-
+#endif
 }
+#endif
