@@ -116,6 +116,16 @@ void setup() {
     // Initialize the Control Surface system
     Control_Surface.begin();
     
+    // Configure FSR scaling to map 0-8200 to full MIDI range (0-127)
+    fsr.map([](analog_t rawValue) -> analog_t {
+        constexpr analog_t maxFSR = 8200;        // Your maximum FSR pressure value
+        constexpr analog_t maxEnhanced = 16383;  // 14-bit enhanced range (2^14 - 1)
+        
+        // Clamp and scale the FSR value to full enhanced range
+        if (rawValue >= maxFSR) return maxEnhanced;
+        return (rawValue * maxEnhanced) / maxFSR;
+    });
+            
     // Initialize haptic system
     hapticPlayer.setVolume(0.0f);
     hapticPlayer.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
@@ -134,7 +144,8 @@ void setup() {
 void loop() {
     // Update all MIDI processing and routing
     Control_Surface.loop();
-    
+    delay(5); // Limit control surface processing.
+
     // Handle encoder for effect switching
     int newEffect = effectEncoder.update();
     if (newEffect >= 0) {
