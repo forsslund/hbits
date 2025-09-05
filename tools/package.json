@@ -1,0 +1,16 @@
+{
+  "name": "midi-cc22-parser",
+  "version": "1.0.0",
+  "description": "Parse MIDI files and extract CC22 control change messages with timestamps",
+  "main": "midi-parser.js",
+  "scripts": {
+    "start": "node midi-parser.js",
+    "parse": "node midi-parser.js"
+  },
+  "dependencies": {
+    "midi-file": "^1.2.4"
+  },
+  "keywords": ["midi", "parser", "cc22", "control-change", "haptic"],
+  "author": "",
+  "license": "MIT"
+}
