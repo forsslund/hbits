@@ -1,51 +1,56 @@
 #include <Arduino.h>
 #include <Control_Surface.h>
-#include "hapticplayer.h"
 #include "cli.h"
-#include "encoder.h"
 #include "ledcontrol.h"
 
 // MIDI Interface
 BluetoothMIDI_Interface midibt;
 
-// Haptic Player
-HapticPlayer hapticPlayer;
-
 // CLI Interface
 CLI commandInterface(Serial, midibt);
 
-// Encoder and LED Controller
-EffectEncoder effectEncoder;
+// LED Controller
 LEDController ledController;
 
-// FSR Input Element
-CCPotentiometer fsr {
-    A0,     // Analog pin
-    {0x16}, // CC 22 (0x16 in hex)
+// Heat control PWM setup
+const uint8_t HEAT_PIN = 18;        // GPIO pin for MOSFET M0
+const uint8_t HEAT_PWM_CHANNEL = 0; // PWM channel for heat control
+volatile uint8_t currentHeatLevel = 0; // Current heat level (0-127)
+
+// Heat Control Encoder - sends CC23 MIDI messages
+CCAbsoluteEncoder heatEncoder {
+    {21, 38},   // Encoder pins
+    {23},       // CC 23 for heat control
+    1           // Multiplier
 };
 
 /**
- * @brief Custom MIDI sink for haptic volume control
+ * @brief Custom MIDI sink for heat control
  * 
- * This sink receives MIDI messages from pipes and controls the haptic player
- * based on CC 22 messages. It follows the TrueMIDI_Sink interface properly.
+ * This sink receives MIDI messages from pipes and controls the heat level
+ * based on CC 23 messages. It follows the TrueMIDI_Sink interface properly.
  */
-class HapticVolumeSink : public TrueMIDI_Sink {
+class HeatControlSink : public TrueMIDI_Sink {
 public:
-    explicit HapticVolumeSink(HapticPlayer& player) : haptic(player) {}
+    HeatControlSink() {}
     
     void sinkMIDIfromPipe(ChannelMessage msg) override {
-        // Handle CC 22 messages for haptic volume control
+        // Handle CC 23 messages for heat control
         if (msg.getMessageType() == MIDIMessageType::ControlChange && 
-            msg.getData1() == 22) {
+            msg.getData1() == 23) {
             
-            float volume = msg.getData2() / 127.0f;
-            haptic.setVolume(volume);
+            currentHeatLevel = msg.getData2();
             
-            Serial.print("Haptic volume: ");
-            Serial.print(volume, 3);
-            Serial.print(" (CC22=");
-            Serial.print(msg.getData2());
+            // Convert CC23 value (0-127) to PWM duty cycle (0-255)
+            uint8_t pwmValue = (currentHeatLevel * 255) / 127;
+            ledcWrite(HEAT_PWM_CHANNEL, pwmValue);
+            
+            Serial.print("Heat level: ");
+            Serial.print((currentHeatLevel * 100) / 127);
+            Serial.print("% (CC23=");
+            Serial.print(currentHeatLevel);
+            Serial.print(", PWM=");
+            Serial.print(pwmValue);
             Serial.println(")");
         }
     }
@@ -54,90 +59,66 @@ public:
     void sinkMIDIfromPipe(SysExMessage) override {}
     void sinkMIDIfromPipe(SysCommonMessage) override {}
     void sinkMIDIfromPipe(RealTimeMessage) override {}
-
-private:
-    HapticPlayer& haptic;
 };
 
-// Instantiate the haptic sink
-HapticVolumeSink hapticSink(hapticPlayer);
+// Instantiate the heat control sink
+HeatControlSink heatSink;
 
 /**
  * @brief MIDI Routing Setup
  * 
- * Creates a clean pipe-based routing system with three explicit routes:
+ * Creates a clean pipe-based routing system with two explicit routes:
  * 
  *  ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
- *  │   FSR (A0)      │───▶│ Control_     │───▶│ HapticVolume    │ Route 1
- *  │   CC 22         │    │ Surface      │    │ Sink            │
- *  └─────────────────┘    └──────┬───────┘    └─────────┬───────┘
- *                                │                      ▲
- *                                ▼                      │ Route 3
+ *  │ Heat Encoder    │───▶│ Control_     │───▶│ Bluetooth Out   │ Route 1
+ *  │ CC 23           │    │ Surface      │    │ (transmission)  │
+ *  └─────────────────┘    └──────────────┘    └─────────────────┘
+ *                                                       ▲
+ *                                                       │ Route 2
  *  ┌─────────────────┐    ┌──────────────┐             │
- *  │ External MIDI   │───▶│ Bluetooth    │─────────────┘
- *  │ Controller      │    │ Interface    │
- *  └─────────────────┘    └──────▲───────┘
- *                                │ Route 2
- *                                │
- *                         ┌──────┴───────┐
- *                         │ Control_     │
- *                         │ Surface      │
- *                         └──────────────┘
+ *  │ External MIDI   │───▶│ Bluetooth In │─────────────┘
+ *  │ Controller      │    │ CC23 → Heat  │
+ *  └─────────────────┘    └──────────────┘
  */
 
-// Pipe factory for proper routing management (need 3 pipes for separation of concerns)
-MIDI_PipeFactory<3> pipeFactory;
+// Pipe factory for proper routing management (need 2 pipes for separation of concerns)
+MIDI_PipeFactory<2> pipeFactory;
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("=== Clean MIDI Haptic Controller ===");
+    Serial.println("=== HBITS Heat Controller ===");
+    
+    // Initialize PWM for heat control
+    ledcSetup(HEAT_PWM_CHANNEL, 1000, 8); // 1kHz, 8-bit resolution
+    ledcAttachPin(HEAT_PIN, HEAT_PWM_CHANNEL);
+    ledcWrite(HEAT_PWM_CHANNEL, 0); // Start with heat off
+    
+    Serial.println("PWM heat control initialized on pin 18");
     
     // Set up clean pipe-based routing BEFORE Control_Surface.begin()
-    // Three explicit, unidirectional routes for clear separation of concerns:
+    // Two explicit, unidirectional routes for clear separation of concerns:
     // 
-    // Route 1: Control_Surface (FSR) → HapticSink (standalone haptic control)
-    Control_Surface >> pipeFactory >> hapticSink;
-    
-    // Route 2: Control_Surface (FSR) → Bluetooth (FSR data transmission)
+    // Route 1: Control_Surface (Heat Encoder) → Bluetooth (CC23 transmission)
     Control_Surface >> pipeFactory >> midibt;
     
-    // Route 3: Bluetooth → HapticSink (external MIDI control of haptics)
-    midibt >> pipeFactory >> hapticSink;
+    // Route 2: Bluetooth → HeatSink (external MIDI control of heat)
+    midibt >> pipeFactory >> heatSink;
     
     // Set Bluetooth device name
-    midibt.setName("HBITS Vibe 1");
+    midibt.setName("HBITS Heat 1");
     
     // Initialize LED controller
     ledController.begin();
     
-    // Initialize encoder
-    effectEncoder.begin();
-    
     // Initialize the Control Surface system
     Control_Surface.begin();
-    
-    // Configure FSR scaling to map 0-5150 to full MIDI range (0-127)
-    fsr.map([](analog_t rawValue) -> analog_t {
-        constexpr analog_t maxFSR = 5150;        // Your maximum FSR pressure value
-        constexpr analog_t maxEnhanced = 16383;  // 14-bit enhanced range (2^14 - 1)
-        
-        // Clamp and scale the FSR value to full enhanced range
-        if (rawValue >= maxFSR) return maxEnhanced;
-        return (rawValue * maxEnhanced) / maxFSR;
-    });
             
-    // Initialize haptic system
-    hapticPlayer.setVolume(0.0f);
-    hapticPlayer.setEffect(std::make_shared<HapticEffect>(EFFECT_CONST_VIBE));
-    hapticPlayer.start();
-    
     // Initialize CLI
     commandInterface.begin();
     
     Serial.println("Routing configured:");
-    Serial.println("  Route 1: FSR (A0) → CC22 → Haptic Volume (standalone)");
-    Serial.println("  Route 2: FSR (A0) → CC22 → Bluetooth Out (transmission)");
-    Serial.println("  Route 3: Bluetooth In → CC22 → Haptic Volume (external control)");
+    Serial.println("  Route 1: Heat Encoder → CC23 → Bluetooth Out (transmission)");
+    Serial.println("  Route 2: Bluetooth In → CC23 → Heat Control (external control)");
     Serial.println("Ready!");
 }
 
@@ -146,12 +127,14 @@ void loop() {
     Control_Surface.loop();
     delay(5); // Limit control surface processing.
 
-    // Handle encoder for effect switching
-    int newEffect = effectEncoder.update();
-    if (newEffect >= 0) {
-        hapticPlayer.setEffect(effectEncoder.getEffect(newEffect));
-        ledController.updateDisplay(newEffect);
-    }
+    // Get current encoder value and update heat level display
+    uint8_t encoderValue = heatEncoder.getValue();
+    
+    // Map encoder value (0-23) to CC23 range (0-127) for LED display
+    uint8_t displayHeatLevel = (encoderValue * 127) / 23;
+    
+    // Update LED display to show current heat level as rainbow bar graph
+    ledController.updateDisplay(displayHeatLevel);
     
     // Refresh LED display
     ledController.refresh();
