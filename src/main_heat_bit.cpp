@@ -98,10 +98,14 @@ void setup() {
     // Set up clean pipe-based routing BEFORE Control_Surface.begin()
     // Two explicit, unidirectional routes for clear separation of concerns:
     // 
-    // Route 1: Control_Surface (Heat Encoder) → Bluetooth (CC23 transmission)
+
+    // Route 1: Control_Surface (FSR) → HeatSink (standalone haptic control)
+    Control_Surface >> pipeFactory >> heatSink;
+    
+    // Route 2: Control_Surface (Heat Encoder) → Bluetooth (CC23 transmission)
     Control_Surface >> pipeFactory >> midibt;
     
-    // Route 2: Bluetooth → HeatSink (external MIDI control of heat)
+    // Route 3: Bluetooth → HeatSink (external MIDI control of heat)
     midibt >> pipeFactory >> heatSink;
     
     // Set Bluetooth device name
