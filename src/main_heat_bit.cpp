@@ -19,7 +19,7 @@ volatile uint8_t currentHeatLevel = 0; // Current heat level (0-127)
 
 // Heat Control Encoder - sends CC23 MIDI messages
 CCAbsoluteEncoder heatEncoder {
-    {21, 38},  // Encoder pins
+    {38, 21},  // Encoder pins (swapped for clockwise increase)
     {23},       // CC 23 for heat control
     6           // Multiplier
 };

@@ -17,7 +17,7 @@ extern const HapticEffect EFFECT_PULSE_PURR;
 
 class EffectEncoder {
 public:
-    EffectEncoder() : encoder({21, 38}, MIDI_CC::Pan, 1), oldValue(0) {}
+    EffectEncoder() : encoder({38, 21}, MIDI_CC::Pan, 1), oldValue(0) {}
     
     void begin() {
         // No additional initialization needed

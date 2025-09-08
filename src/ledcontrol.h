@@ -36,8 +36,22 @@ public:
         //if (effectIndex != currentEffect) {
             currentEffect = effectIndex;
             
+            // Map effect index to LED positions going clockwise from LED 23
+            // Effect 0: LEDs 23,22,21,20  Effect 1: LEDs 19,18,17,16  etc.
+            uint8_t startLED = 23 - (effectIndex * 4);
+            
             for (uint8_t i = 0; i < 24; i++) {
-                if (i >= effectIndex * 4 && i < (effectIndex + 1) * 4) {
+                // Check if this LED should be lit for current effect
+                bool shouldLight = false;
+                for (uint8_t j = 0; j < 4; j++) {
+                    uint8_t effectLED = (startLED - j + 24) % 24;
+                    if (i == effectLED) {
+                        shouldLight = true;
+                        break;
+                    }
+                }
+                
+                if (shouldLight) {
                     ledRing.LEDRingSmall_Set_RGB(i, rainbowColors[effectIndex]);
                 } else {
                     ledRing.LEDRingSmall_Set_RGB(i, 0x000000);
@@ -49,21 +63,24 @@ public:
     /**
      * @brief Update LED display for heat level visualization
      * 
-     * Creates a line segment from LED 0 to current heat level with gradient:
-     * - LED 0: Blue (0x0000FF)
-     * - LED 12: Orange (0xFF8000) 
-     * - LED 23: Red (0xFF0000)
+     * Creates a line segment from LED 23 to current heat level with gradient (clockwise):
+     * - LED 23: Blue (0x0000FF) - start position
+     * - LED 11: Orange (0xFF8000) 
+     * - LED 0: Red (0xFF0000) - end position
      * 
      * @param heatLevel Heat level (0-127 CC value)
      */
     void updateHeatDisplay(uint8_t heatLevel) {
-        // Map heat level (0-127) to LED position (0-23)
-        uint8_t maxLED = (heatLevel * 23) / 127;
+        // Map heat level (0-127) to number of LEDs to light (0-23)
+        uint8_t numLEDs = (heatLevel * 23) / 127;
         
         for (uint8_t i = 0; i < 24; i++) {
-            if (i <= maxLED) {
-                // Light up LED with gradient color
-                ledRing.LEDRingSmall_Set_RGB(i, calculateHeatGradientColor(i));
+            // Calculate position from start (LED 23 going clockwise to LED 0)
+            uint8_t positionFromStart = (24 - 1 - i) % 24; // LED 23=0, LED 22=1, ..., LED 0=23
+            
+            if (positionFromStart <= numLEDs) {
+                // Light up LED with gradient color based on position from start
+                ledRing.LEDRingSmall_Set_RGB(i, calculateHeatGradientColor(positionFromStart));
             } else {
                 // Turn off LED
                 ledRing.LEDRingSmall_Set_RGB(i, 0x000000);
