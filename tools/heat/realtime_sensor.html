@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time INA219 Sensor Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-card.power-limited {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .stat-card.heat-warning {
+            border-left-color: #ffc107;
+            background-color: #fff3cd;
+        }
+        .stat-title {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .stat-value {
+            font-size: 1.3em;
+            color: #333;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.active {
+            background-color: #28a745;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .connect-btn {
+            background-color: #dc3545;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .connect-btn.connected {
+            background-color: #28a745;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.disconnected {
+            color: #dc3545;
+        }
+        .status.connected {
+            color: #28a745;
+        }
+        .settings {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+        label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        input[type="number"] {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real-time INA219 Sensor Data</h1>
+        
+        <div class="settings">
+            <div class="setting-row">
+                <label>Max Data Points:</label>
+                <input type="number" id="maxPoints" value="200" min="50" max="1000">
+                <span>readings to keep in memory</span>
+            </div>
+            <div class="setting-row">
+                <label>Update Rate:</label>
+                <input type="number" id="updateRate" value="100" min="50" max="1000">
+                <span>ms between chart updates</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="connectBtn" class="connect-btn" onclick="toggleConnection()">Connect to Serial Port</button>
+            <button onclick="clearData()" disabled id="clearBtn">Clear Data</button>
+        </div>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="stats" id="stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <button id="currentBtn" class="active" onclick="showChart('current')">Current (A)</button>
+            <button id="voltageBtn" onclick="showChart('voltage')">Voltage (V)</button>
+            <button id="powerBtn" onclick="showChart('power')">Power (W)</button>
+            <button id="allBtn" onclick="showChart('all')">All Metrics</button>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="sensorChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let sensorData = [];
+        let chart = null;
+        let port = null;
+        let reader = null;
+        let isConnected = false;
+        let startTime = null;
+        let currentMetric = 'current';
+        let updateInterval = null;
+
+        // Check if Web Serial API is supported
+        if (!('serial' in navigator)) {
+            document.getElementById('status').textContent = 'Web Serial API not supported in this browser';
+            document.getElementById('connectBtn').disabled = true;
+        }
+
+        // Parse a single line of sensor data
+        function parseSensorLine(line) {
+            // Updated pattern to match the new format:
+            // INA219 - Current: 0.777 A, Voltage: 8.77 V, Power: 6.830 W (all avg) (Heat: 70%, Max: 74%)
+            // or
+            // INA219 - Current: 0.748 A, Voltage: 8.73 V, Power: 6.530 W (all avg) (Heat: 74%, Max: 74% POWER LIMITED)
+            const match = line.match(/INA219 - Current: ([\d.]+) A, Voltage: ([\d.]+) V, Power: ([\d.]+) W \(all avg\) \(Heat: (\d+)%, Max: (\d+)%.*?\)/);
+            
+            if (match) {
+                const now = Date.now();
+                if (!startTime) startTime = now;
+                
+                const isPowerLimited = line.includes('POWER LIMITED');
+                
+                return {
+                    current: parseFloat(match[1]),
+                    voltage: parseFloat(match[2]),
+                    power: parseFloat(match[3]),
+                    heat: parseInt(match[4]),
+                    heatMax: parseInt(match[5]),
+                    powerLimited: isPowerLimited,
+                    timestamp: now,
+                    elapsed: (now - startTime) / 1000 // seconds since start
+                };
+            }
+            return null;
+        }
+
+        // Connect to serial port
+        async function connectSerial() {
+            try {
+                // Request a port and open a connection
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                reader = textDecoder.readable.getReader();
+
+                isConnected = true;
+                updateConnectionStatus();
+                startTime = Date.now();
+                
+                // Start reading data
+                readSerialData();
+                
+                // Start updating the chart
+                const updateRate = parseInt(document.getElementById('updateRate').value);
+                updateInterval = setInterval(updateChart, updateRate);
+
+            } catch (error) {
+                console.error('Error connecting to serial port:', error);
+                document.getElementById('status').textContent = `Connection error: ${error.message}`;
+            }
+        }
+
+        // Handle device disconnection
+        async function handleDeviceDisconnected() {
+            if (!isConnected) return; // Already handling disconnection
+            
+            console.log('Handling device disconnection...');
+            isConnected = false;
+            
+            // Clean up existing connections
+            try {
+                if (reader) {
+                    await reader.cancel();
+                }
+                if (port) {
+                    await port.close();
+                }
+            } catch (error) {
+                console.log('Cleanup error (expected):', error);
+            }
+            
+            reader = null;
+            port = null;
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            updateConnectionStatus();
+            document.getElementById('status').textContent = 'Device disconnected - click Connect to reconnect';
+        }
+
+        // Attempt to reconnect automatically
+        async function attemptReconnection() {
+            if (isConnected) return; // Already reconnected
+            
+            try {
+                document.getElementById('status').textContent = 'Attempting to reconnect...';
+                
+                // Reset port reference and try to reconnect fresh
+                port = null;
+                reader = null;
+                
+                // Request the port again (user will need to select it)
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                reader = textDecoder.readable.getReader();
+
+                isConnected = true;
+                updateConnectionStatus();
+                
+                // Restart reading and chart updates
+                readSerialData();
+                const updateRate = parseInt(document.getElementById('updateRate').value);
+                updateInterval = setInterval(updateChart, updateRate);
+                
+                document.getElementById('status').textContent = 'Reconnected successfully!';
+                setTimeout(() => {
+                    if (isConnected) {
+                        document.getElementById('status').textContent = 'Connected - Receiving data...';
+                    }
+                }, 2000);
+            } catch (error) {
+                console.error('Reconnection failed:', error);
+                document.getElementById('status').textContent = 'Reconnection failed - click Connect to try again';
+                isConnected = false;
+                updateConnectionStatus();
+            }
+        }
+
+        // Disconnect from serial port
+        async function disconnectSerial() {
+            isConnected = false;
+            
+            try {
+                if (reader) {
+                    await reader.cancel();
+                }
+                if (port) {
+                    await port.close();
+                }
+            } catch (error) {
+                // Ignore cleanup errors during manual disconnect
+            }
+            
+            reader = null;
+            port = null;
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            updateConnectionStatus();
+        }
+
+        // Read data from serial port
+        async function readSerialData() {
+            let buffer = '';
+            
+            try {
+                while (isConnected) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep incomplete line in buffer
+                    
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine) {
+                            const data = parseSensorLine(trimmedLine);
+                            if (data) {
+                                addDataPoint(data);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error reading serial data:', error);
+                if (isConnected) {
+                    if (error.name === 'NetworkError' && error.message.includes('device has been lost')) {
+                        document.getElementById('status').textContent = 'Device disconnected - attempting to reconnect...';
+                        await handleDeviceDisconnected();
+                    } else {
+                        document.getElementById('status').textContent = `Read error: ${error.message}`;
+                        await disconnectSerial();
+                    }
+                }
+            }
+        }
+
+        // Add new data point and manage buffer size
+        function addDataPoint(data) {
+            sensorData.push(data);
+            
+            const maxPoints = parseInt(document.getElementById('maxPoints').value);
+            if (sensorData.length > maxPoints) {
+                sensorData.shift(); // Remove oldest point
+            }
+        }
+
+        // Toggle connection
+        async function toggleConnection() {
+            if (isConnected) {
+                await disconnectSerial();
+            } else {
+                await connectSerial();
+            }
+        }
+
+        // Monitor port connection status
+        function monitorPortStatus() {
+            if (port && isConnected) {
+                try {
+                    // Check if port is still available
+                    if (!port.readable) {
+                        console.warn('Port readable stream lost');
+                        handleDeviceDisconnected();
+                    }
+                } catch (error) {
+                    console.warn('Port monitoring error:', error);
+                    handleDeviceDisconnected();
+                }
+            }
+        }
+
+        // Periodically check port status (less frequent to avoid interference)
+        setInterval(monitorPortStatus, 5000);
+
+        // Update connection status UI
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            if (isConnected) {
+                if (!statusEl.textContent.includes('Reconnected') && !statusEl.textContent.includes('Attempting')) {
+                    statusEl.textContent = 'Connected - Receiving data...';
+                }
+                statusEl.className = 'status connected';
+                connectBtn.textContent = 'Disconnect';
+                connectBtn.className = 'connect-btn connected';
+                clearBtn.disabled = false;
+            } else {
+                if (!statusEl.textContent.includes('Attempting') && !statusEl.textContent.includes('failed')) {
+                    statusEl.textContent = 'Disconnected';
+                }
+                statusEl.className = 'status disconnected';
+                connectBtn.textContent = 'Connect to Serial Port';
+                connectBtn.className = 'connect-btn';
+                clearBtn.disabled = true;
+            }
+        }
+
+        // Clear all data
+        function clearData() {
+            sensorData = [];
+            startTime = null;
+            updateStats();
+            updateChart();
+        }
+
+        // Update statistics
+        function updateStats() {
+            if (sensorData.length === 0) {
+                document.getElementById('stats').innerHTML = '<div class="stat-card"><div class="stat-title">No Data</div><div class="stat-value">Connect to start</div></div>';
+                return;
+            }
+
+            const currents = sensorData.map(d => d.current);
+            const voltages = sensorData.map(d => d.voltage);
+            const powers = sensorData.map(d => d.power);
+            const latest = sensorData[sensorData.length - 1];
+            
+            const stats = [
+                {
+                    title: 'Data Points',
+                    value: sensorData.length
+                },
+                {
+                    title: 'Duration',
+                    value: latest ? latest.elapsed.toFixed(1) + ' s' : '0 s'
+                },
+                {
+                    title: 'Current (Avg)',
+                    value: latest ? latest.current.toFixed(3) + ' A' : '0 A'
+                },
+                {
+                    title: 'Voltage (Avg)',
+                    value: latest ? latest.voltage.toFixed(2) + ' V' : '0 V'
+                },
+                {
+                    title: 'Power (Avg)',
+                    value: latest ? latest.power.toFixed(2) + ' W' : '0 W'
+                },
+                {
+                    title: 'Heat Level',
+                    value: latest ? latest.heat + '%' : '0%'
+                },
+                {
+                    title: 'Heat Max',
+                    value: latest ? latest.heatMax + '%' : '0%'
+                },
+                {
+                    title: 'Power Status',
+                    value: latest ? (latest.powerLimited ? 'LIMITED' : 'Normal') : 'Unknown'
+                }
+            ];
+
+            const statsContainer = document.getElementById('stats');
+            statsContainer.innerHTML = stats.map(stat => {
+                let cardClass = 'stat-card';
+                if (stat.title === 'Power Status' && stat.value === 'LIMITED') {
+                    cardClass += ' power-limited';
+                } else if (stat.title === 'Heat Level' && latest && latest.heat >= 70) {
+                    cardClass += ' heat-warning';
+                }
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="stat-title">${stat.title}</div>
+                        <div class="stat-value">${stat.value}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update chart with current data
+        function updateChart() {
+            updateStats();
+            if (chart) {
+                showChart(currentMetric);
+            }
+        }
+
+        // Show chart for specific metric
+        function showChart(metric) {
+            currentMetric = metric;
+            
+            // Update button states
+            document.querySelectorAll('button[id$="Btn"]:not(#connectBtn):not(#clearBtn)').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(metric + 'Btn').classList.add('active');
+
+            const ctx = document.getElementById('sensorChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            if (sensorData.length === 0) {
+                return;
+            }
+
+            const labels = sensorData.map(d => d.elapsed.toFixed(2) + 's');
+            let datasets = [];
+            
+            if (metric === 'current') {
+                datasets = [{
+                    label: 'Current (A)',
+                    data: sensorData.map(d => d.current),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1,
+                    pointRadius: 1
+                }];
+            } else if (metric === 'voltage') {
+                datasets = [{
+                    label: 'Voltage (V)',
+                    data: sensorData.map(d => d.voltage),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1,
+                    pointRadius: 1
+                }];
+            } else if (metric === 'power') {
+                datasets = [{
+                    label: 'Power (W)',
+                    data: sensorData.map(d => d.power),
+                    borderColor: 'rgb(255, 205, 86)',
+                    backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                    tension: 0.1,
+                    pointRadius: 1
+                }];
+            } else if (metric === 'all') {
+                datasets = [
+                    {
+                        label: 'Current (A)',
+                        data: sensorData.map(d => d.current),
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        pointRadius: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Voltage (V)',
+                        data: sensorData.map(d => d.voltage),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        tension: 0.1,
+                        pointRadius: 1,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Power (W)',
+                        data: sensorData.map(d => d.power),
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                        tension: 0.1,
+                        pointRadius: 1,
+                        yAxisID: 'y2'
+                    }
+                ];
+            }
+
+            const config = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false, // Disable animation for real-time updates
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: metric === 'all' ? 'All Sensor Metrics (Real-time)' : `Sensor ${metric.charAt(0).toUpperCase() + metric.slice(1)} (Real-time)`
+                        }
+                    },
+                    scales: metric === 'all' ? {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Current (A)'
+                            },
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Voltage (V)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: false,
+                            position: 'right',
+                        }
+                    } : {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: metric === 'current' ? 'Current (A)' : 
+                                     metric === 'voltage' ? 'Voltage (V)' : 'Power (W)'
+                            }
+                        }
+                    }
+                }
+            };
+
+            chart = new Chart(ctx, config);
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            updateStats();
+            showChart('current');
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (isConnected) {
+                disconnectSerial();
+            }
+        });
+    </script>
+</body>
+</html>

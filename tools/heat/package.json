@@ -1,0 +1,13 @@
+{
+  "name": "sensor-visualizer",
+  "version": "1.0.0",
+  "description": "Real-time INA219 sensor data visualization",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "ws": "^8.14.2"
+  }
+}
