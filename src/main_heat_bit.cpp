@@ -19,9 +19,9 @@ volatile uint8_t currentHeatLevel = 0; // Current heat level (0-127)
 
 // Heat Control Encoder - sends CC23 MIDI messages
 CCAbsoluteEncoder heatEncoder {
-    {21, 38},   // Encoder pins
+    {21, 38},  // Encoder pins
     {23},       // CC 23 for heat control
-    1           // Multiplier
+    6           // Multiplier
 };
 
 /**
@@ -82,7 +82,7 @@ HeatControlSink heatSink;
  */
 
 // Pipe factory for proper routing management (need 2 pipes for separation of concerns)
-MIDI_PipeFactory<2> pipeFactory;
+MIDI_PipeFactory<3> pipeFactory;
 
 void setup() {
     Serial.begin(115200);
