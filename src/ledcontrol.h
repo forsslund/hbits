@@ -46,6 +46,31 @@ public:
         //}
     }
     
+    /**
+     * @brief Update LED display for heat level visualization
+     * 
+     * Creates a line segment from LED 0 to current heat level with gradient:
+     * - LED 0: Blue (0x0000FF)
+     * - LED 12: Orange (0xFF8000) 
+     * - LED 23: Red (0xFF0000)
+     * 
+     * @param heatLevel Heat level (0-127 CC value)
+     */
+    void updateHeatDisplay(uint8_t heatLevel) {
+        // Map heat level (0-127) to LED position (0-23)
+        uint8_t maxLED = (heatLevel * 23) / 127;
+        
+        for (uint8_t i = 0; i < 24; i++) {
+            if (i <= maxLED) {
+                // Light up LED with gradient color
+                ledRing.LEDRingSmall_Set_RGB(i, calculateHeatGradientColor(i));
+            } else {
+                // Turn off LED
+                ledRing.LEDRingSmall_Set_RGB(i, 0x000000);
+            }
+        }
+    }
+    
     void refresh() {
         ledRing.LEDRingSmall_GlobalCurrent(0x10);
         ledRing.LEDRingSmall_PWM_MODE();
@@ -55,4 +80,32 @@ private:
     LEDRingSmall ledRing;
     uint32_t rainbowColors[6];
     int currentEffect;
+    
+    /**
+     * @brief Calculate gradient color for heat display
+     * 
+     * Creates smooth gradient: Blue (LED 0) → Orange (LED 12) → Red (LED 23)
+     * 
+     * @param ledIndex LED position (0-23)
+     * @return 24-bit RGB color value
+     */
+    uint32_t calculateHeatGradientColor(uint8_t ledIndex) {
+        uint8_t r, g, b;
+        
+        if (ledIndex <= 12) {
+            // First half: Blue → Orange (0x0000FF → 0xFF8000)
+            float ratio = (float)ledIndex / 12.0f;
+            r = (uint8_t)(0x00 + ratio * (0xFF - 0x00));
+            g = (uint8_t)(0x00 + ratio * (0x80 - 0x00));
+            b = (uint8_t)(0xFF - ratio * (0xFF - 0x00));
+        } else {
+            // Second half: Orange → Red (0xFF8000 → 0xFF0000)
+            float ratio = (float)(ledIndex - 12) / 11.0f;
+            r = 0xFF; // Stay at max red
+            g = (uint8_t)(0x80 - ratio * (0x80 - 0x00));
+            b = 0x00; // Stay at min blue
+        }
+        
+        return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+    }
 };

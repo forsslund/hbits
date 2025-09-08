@@ -131,14 +131,9 @@ void loop() {
     Control_Surface.loop();
     delay(5); // Limit control surface processing.
 
-    // Get current encoder value and update heat level display
-    uint8_t encoderValue = heatEncoder.getValue();
-    
-    // Map encoder value (0-23) to CC23 range (0-127) for LED display
-    uint8_t displayHeatLevel = (encoderValue * 127) / 23;
-    
-    // Update LED display to show current heat level as rainbow bar graph
-    ledController.updateDisplay(displayHeatLevel);
+    // Update LED display to show current heat level as gradient line segment
+    // Use the actual currentHeatLevel variable which reflects both encoder and MIDI input
+    ledController.updateHeatDisplay(currentHeatLevel);
     
     // Refresh LED display
     ledController.refresh();
