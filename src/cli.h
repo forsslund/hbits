@@ -82,9 +82,9 @@ private:
   void sendTestNote() {
     serial.println("Sending test MIDI note...");
     // Send a test note on message
-    midiInterface.sendNoteOn({60, CHANNEL_1}, 100); // Middle C, velocity 100
+    midiInterface.sendNoteOn({60, Channel_1}, 100); // Middle C, velocity 100
     delay(500);
-    midiInterface.sendNoteOff({60, CHANNEL_1}, 0);
+    midiInterface.sendNoteOff({60, Channel_1}, 0);
     serial.println("Test MIDI message sent");
   }
 };

@@ -104,11 +104,10 @@ void  LEDRingSmall::LEDRingSmall_Set_BLUE(uint8_t led_n, uint8_t color) {
 }
 
 void  LEDRingSmall::LEDRingSmall_ClearAll(void) {
-  uint8_t i;
   LEDRingSmall_PWM_MODE();
   
-  for (i = 1; i < 73; i++) {
-   	  writeRegister8(i,0);
+  for (uint8_t i = 1; i < 73; i++) {
+     writeRegister8(i,0);
   }
 
 }
