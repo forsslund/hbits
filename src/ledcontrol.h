@@ -88,6 +88,57 @@ public:
         }
     }
     
+    /**
+     * @brief Update LED display for air level visualization with center-based display
+     * 
+     * Creates a center-based visualization:
+     * - LED 0 (12 o'clock): Center position (CC 64 = stopped)
+     * - LEDs 1-12 (clockwise): Inflation side (CC 65-127)
+     * - LEDs 23-13 (counterclockwise): Deflation side (CC 63-0)
+     * 
+     * @param airLevel Air level (0-127 CC value, 64 = center/stopped)
+     */
+    void updateAirDisplay(uint8_t airLevel) {
+        // Clear all LEDs first
+        for (uint8_t i = 0; i < 24; i++) {
+            ledRing.LEDRingSmall_Set_RGB(i, 0x000000);
+        }
+        
+        if (airLevel == 64) {
+            // Center position - light only LED 0 with white
+            ledRing.LEDRingSmall_Set_RGB(0, 0xFFFFFF);
+            
+        } else if (airLevel > 64) {
+            // Inflation mode (65-127) - counterclockwise from center
+            uint8_t inflationLevel = airLevel - 64; // 1-63
+            uint8_t numLEDs = (inflationLevel * 12) / 63; // Map to 0-12 LEDs
+            
+            // Always light center LED
+            ledRing.LEDRingSmall_Set_RGB(0, 0xFFFFFF);
+            
+            // Light inflation LEDs (23-13 counterclockwise)
+            for (uint8_t i = 1; i <= numLEDs; i++) {
+                uint8_t ledIndex = (24 - i) % 24; // LED 23, 22, 21, ..., 13
+                // Red color for inflation
+                ledRing.LEDRingSmall_Set_RGB(ledIndex, 0xFF0000);
+            }
+            
+        } else {
+            // Deflation mode (0-63) - clockwise from center
+            uint8_t deflationLevel = 63 - airLevel; // 0-63 reversed
+            uint8_t numLEDs = (deflationLevel * 12) / 63; // Map to 0-12 LEDs
+            
+            // Always light center LED
+            ledRing.LEDRingSmall_Set_RGB(0, 0xFFFFFF);
+            
+            // Light deflation LEDs (1-12 clockwise)
+            for (uint8_t i = 1; i <= numLEDs; i++) {
+                // Blue color for deflation
+                ledRing.LEDRingSmall_Set_RGB(i, 0x0000FF);
+            }
+        }
+    }
+    
     void refresh() {
         ledRing.LEDRingSmall_GlobalCurrent(0x10);
         ledRing.LEDRingSmall_PWM_MODE();
