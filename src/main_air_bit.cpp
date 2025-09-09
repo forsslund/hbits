@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <Control_Surface.h>
+#include <Wire.h>
+#include <Adafruit_LPS28.h>
 #include "cli.h"
 #include "ledcontrol.h"
 
@@ -23,6 +25,17 @@ CCAbsoluteEncoder airEncoder {
     {23},       // CC 23 for air control
     6           // Multiplier
 };
+
+// LPS28 Pressure Sensor Setup - using Adafruit LPS28 library
+Adafruit_LPS28 lps28;  // LPS28 sensor object using Adafruit library
+unsigned long lastPressureRead = 0;
+float currentPressure = 0.0;
+uint8_t pressureMidiValue = 0;
+
+// Use default I2C pins (GPIO 21 = SDA, GPIO 22 = SCL)
+// These work fine alongside encoder and other I2C devices
+
+// Pressure Output - we'll send CC24 directly via MIDI interface
 
 /**
  * @brief Custom MIDI sink for air/pump control
@@ -129,6 +142,43 @@ AirControlSink airSink;
 // Pipe factory for proper routing management (need 2 pipes for separation of concerns)
 MIDI_PipeFactory<3> pipeFactory;
 
+/**
+ * @brief Update pressure reading and send CC24 MIDI message
+ * 
+ * Uses status-based reading following official Adafruit patterns.
+ * Only reads when data is ready, more efficient than timer-based polling.
+ * Initial mapping: 950-1050 hPa → 0-127 MIDI range (adjustable based on actual readings)
+ */
+void updatePressureReading() {
+    // Check if pressure data is ready using official Adafruit pattern
+    if (lps28.getStatus() & LPS28_STATUS_PRESS_READY) {
+        // Read pressure and temperature directly using official methods
+        float pressureHPa = lps28.getPressure();
+        float temperatureC = lps28.getTemperature();
+        currentPressure = pressureHPa;
+        
+        // Map pressure to MIDI range (measured range: 880-1250 hPa)
+        // Constrain to prevent wraparound below minimum pressure
+        long pressureCentiPa = (long)(pressureHPa * 100);
+        pressureMidiValue = map(pressureCentiPa, 88000, 125000, 0, 127);
+        pressureMidiValue = constrain(pressureMidiValue, 0, 127);
+        
+        // Send CC24 MIDI message directly
+        midibt.sendControlChange({24, Channel_1}, pressureMidiValue);
+        
+        // Throttle serial output to avoid flooding (only every 100ms)
+        if (millis() - lastPressureRead >= 100) {
+            Serial.print("Pressure: ");
+            Serial.print(currentPressure, 2);
+            Serial.print(" hPa, Temp: ");
+            Serial.print(temperatureC, 1);
+            Serial.print(" °C, MIDI CC24: ");
+            Serial.println(pressureMidiValue);
+            lastPressureRead = millis();
+        }
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("=== HBITS Air Controller ===");
@@ -141,6 +191,51 @@ void setup() {
         ledcWrite(PWM_CHANNELS[i], 0); // Start with all motors off
     }
     Serial.println("PWM channels initialized for pump/valve control");
+    
+    // Initialize I2C for LPS28 pressure sensor (default pins work fine with encoder)
+    Serial.println("Initializing I2C for LPS28 pressure sensor...");
+    Wire.begin();  // Use default I2C pins (GPIO 21 = SDA, GPIO 22 = SCL)
+    
+    // I2C device scanning with delay as requested
+    Serial.println("Scanning I2C devices...");
+    //delay(5000);  // 5 second delay so user doesn't miss I2C device detection messages
+    int deviceCount = 0;
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        if (Wire.endTransmission() == 0) {
+            Serial.print("I2C device found at address 0x");
+            if (address < 16) Serial.print("0");
+            Serial.println(address, HEX);
+            deviceCount++;
+        }
+    }
+    if (deviceCount == 0) {
+        Serial.println("No I2C devices found");
+    } else {
+        Serial.print("Found ");
+        Serial.print(deviceCount);
+        Serial.println(" I2C device(s)");
+    }
+    
+    // Try to initialize LPS28 with the detected I2C address 0x5C  
+    if (!lps28.begin(&Wire, 0x5C)) {
+        Serial.println("Failed to initialize LPS28 chip at address 0x5C");
+        Serial.println("Continuing without pressure sensor...");
+        // Don't halt - continue without pressure sensor
+    } else {
+        Serial.println("LPS28 Found and initialized at address 0x5C!");
+        
+        // Configure sensor for optimal accuracy and stability
+        lps28.setDataRate(LPS28_ODR_10_HZ);
+        lps28.setAveraging(LPS28_AVG_4);        // 4-sample averaging for noise reduction
+        lps28.setFullScaleMode(true);           // Extended range (4060 hPa) for better resolution
+        
+        Serial.println("LPS28 pressure sensor configured:");
+        Serial.println("  - Data rate: 10 Hz");
+        Serial.println("  - Averaging: 4 samples (noise reduction)");
+        Serial.println("  - Full-scale mode: Extended range (4060 hPa)");
+        Serial.println("LPS28 pressure sensor ready!");
+    }
     
     // Set up clean pipe-based routing BEFORE Control_Surface.begin()
     // Three explicit, unidirectional routes for clear separation of concerns:
@@ -174,6 +269,7 @@ void setup() {
     Serial.println("  Route 1: Air Encoder → CC23 → Bluetooth Out (transmission)");
     Serial.println("  Route 2: Bluetooth In → CC23 → Air Control (external control)");
     Serial.println("  Route 3: Air Encoder → CC23 → Air Control (direct control)");
+    Serial.println("  Route 4: LPS28 Pressure Sensor → CC24 → Bluetooth Out (every 100ms)");
     Serial.println("Ready!");
 }
 
@@ -181,6 +277,9 @@ void loop() {
     // Update all MIDI processing and routing
     Control_Surface.loop();
     delay(5); // Limit control surface processing.
+
+    // Update pressure reading and send CC24
+    updatePressureReading();
 
     // Update LED display to show current air level with center-based visualization
     ledController.updateAirDisplay(currentAirLevel);
