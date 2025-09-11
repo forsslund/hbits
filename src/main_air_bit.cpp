@@ -19,12 +19,15 @@ const uint8_t MOTOR_PINS[4] = {18, 17, 10, 9};  // GPIO pins for motors: M1 pump
 const uint8_t PWM_CHANNELS[4] = {0, 1, 2, 3};   // PWM channels for motors
 volatile uint8_t currentAirLevel = 64; // Current air level (0-127, with 64 = stopped)
 
-// Air Control Encoder - sends CC23 MIDI messages
+// Air Control Encoder - sends CC24 MIDI messages
 CCAbsoluteEncoder airEncoder {
     {38, 21},  // Encoder pins (swapped for clockwise increase)
-    {23},       // CC 23 for air control
+    {24},       // CC 24 for air control
     6           // Multiplier
 };
+
+// Encoder Reset Button - connected to D12 (GPIO 47)
+Button encoderResetButton {47};
 
 // LPS28 Pressure Sensor Setup - using Adafruit LPS28 library
 Adafruit_LPS28 lps28;  // LPS28 sensor object using Adafruit library
@@ -35,13 +38,13 @@ uint8_t pressureMidiValue = 0;
 // Use default I2C pins (GPIO 21 = SDA, GPIO 22 = SCL)
 // These work fine alongside encoder and other I2C devices
 
-// Pressure Output - we'll send CC24 directly via MIDI interface
+// Pressure Output - we'll send CC25 directly via MIDI interface
 
 /**
  * @brief Custom MIDI sink for air/pump control
  * 
  * This sink receives MIDI messages from pipes and controls the air pressure
- * based on CC 23 messages with 64-centered mapping:
+ * based on CC 24 messages with 64-centered mapping:
  * - CC 64: Stop (all motors off)
  * - CC 65-127: Inflation (increasing PWM)
  * - CC 0-63: Deflation (increasing PWM)
@@ -51,9 +54,9 @@ public:
     AirControlSink() {}
     
     void sinkMIDIfromPipe(ChannelMessage msg) override {
-        // Handle CC 23 messages for air control
+        // Handle CC 24 messages for air control
         if (msg.getMessageType() == MIDIMessageType::ControlChange && 
-            msg.getData1() == 23) {
+            msg.getData1() == 24) {
             
             uint8_t ccValue = msg.getData2();
             currentAirLevel = ccValue;
@@ -63,7 +66,7 @@ public:
                 for (int i = 0; i < 4; i++) {
                     ledcWrite(PWM_CHANNELS[i], 0);
                 }
-                Serial.println("Air control: STOPPED (CC23=64)");
+                Serial.println("Air control: STOPPED (CC24=64)");
                 
             } else if (ccValue > 64) {
                 // Inflation mode (65-127)
@@ -79,7 +82,7 @@ public:
                 
                 Serial.print("Air control: INFLATING ");
                 Serial.print(((ccValue - 64) * 100) / 63);
-                Serial.print("% (CC23=");
+                Serial.print("% (CC24=");
                 Serial.print(ccValue);
                 Serial.print(", PWM=");
                 Serial.print(pwmValue);
@@ -99,7 +102,7 @@ public:
                 
                 Serial.print("Air control: DEFLATING ");
                 Serial.print(((63 - ccValue) * 100) / 63);
-                Serial.print("% (CC23=");
+                Serial.print("% (CC24=");
                 Serial.print(ccValue);
                 Serial.print(", PWM=");
                 Serial.print(pwmValue);
@@ -124,18 +127,18 @@ AirControlSink airSink;
  * 
  *  ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
  *  │ Air Encoder     │───▶│ Control_     │───▶│ Bluetooth Out   │ Route 1
- *  │ CC 23           │    │ Surface      │    │ (transmission)  │
+ *  │ CC 24           │    │ Surface      │    │ (transmission)  │
  *  └─────────────────┘    └──────────────┘    └─────────────────┘
  *                                                       ▲
  *                                                       │ Route 2
  *  ┌─────────────────┐    ┌──────────────┐             │
  *  │ External MIDI   │───▶│ Bluetooth In │─────────────┘
- *  │ Controller      │    │ CC23 → Air   │
+ *  │ Controller      │    │ CC24 → Air   │
  *  └─────────────────┘    └──────────────┘
  *                         
  *  ┌─────────────────┐    ┌──────────────┐
  *  │ Air Encoder     │───▶│ AirSink      │ Route 3
- *  │ CC 23           │    │ (direct)     │
+ *  │ CC 24           │    │ (direct)     │
  *  └─────────────────┘    └──────────────┘
  */
 
@@ -143,7 +146,7 @@ AirControlSink airSink;
 MIDI_PipeFactory<3> pipeFactory;
 
 /**
- * @brief Update pressure reading and send CC24 MIDI message
+ * @brief Update pressure reading and send CC25 MIDI message
  * 
  * Uses status-based reading following official Adafruit patterns.
  * Only reads when data is ready, more efficient than timer-based polling.
@@ -163,8 +166,8 @@ void updatePressureReading() {
         pressureMidiValue = map(pressureCentiPa, 88000, 125000, 0, 127);
         pressureMidiValue = constrain(pressureMidiValue, 0, 127);
         
-        // Send CC24 MIDI message directly
-        midibt.sendControlChange({24, Channel_1}, pressureMidiValue);
+        // Send CC25 MIDI message directly
+        midibt.sendControlChange({25, Channel_1}, pressureMidiValue);
         
         // Throttle serial output to avoid flooding (only every 100ms)
         if (millis() - lastPressureRead >= 100) {
@@ -172,7 +175,7 @@ void updatePressureReading() {
             Serial.print(currentPressure, 2);
             Serial.print(" hPa, Temp: ");
             Serial.print(temperatureC, 1);
-            Serial.print(" °C, MIDI CC24: ");
+            Serial.print(" °C, MIDI CC25: ");
             Serial.println(pressureMidiValue);
             lastPressureRead = millis();
         }
@@ -260,16 +263,17 @@ void setup() {
     
     // Initialize encoder to center position (64)
     airEncoder.setValue(64);
-    Serial.println("Air encoder initialized to center position (CC23=64)");
+    Serial.println("Air encoder initialized to center position (CC24=64)");
             
     // Initialize CLI
     commandInterface.begin();
     
     Serial.println("Routing configured:");
-    Serial.println("  Route 1: Air Encoder → CC23 → Bluetooth Out (transmission)");
-    Serial.println("  Route 2: Bluetooth In → CC23 → Air Control (external control)");
-    Serial.println("  Route 3: Air Encoder → CC23 → Air Control (direct control)");
-    Serial.println("  Route 4: LPS28 Pressure Sensor → CC24 → Bluetooth Out (every 100ms)");
+    Serial.println("  Route 1: Air Encoder → CC24 → Bluetooth Out (transmission)");
+    Serial.println("  Route 2: Bluetooth In → CC24 → Air Control (external control)");
+    Serial.println("  Route 3: Air Encoder → CC24 → Air Control (direct control)");
+    Serial.println("  Route 4: LPS28 Pressure Sensor → CC25 → Bluetooth Out (every 100ms)");
+    Serial.println("  Route 5: Encoder Reset Button → D12 (GPIO 47) → Emergency Stop");
     Serial.println("Ready!");
 }
 
@@ -278,7 +282,21 @@ void loop() {
     Control_Surface.loop();
     delay(5); // Limit control surface processing.
 
-    // Update pressure reading and send CC24
+    // Check for encoder reset button press
+    if (encoderResetButton.update() && encoderResetButton.getState() == Button::Pressed) {
+        // Reset encoder to center position (64) - stops pump
+        airEncoder.setValue(64);
+        currentAirLevel = 64;
+        
+        // Immediately stop all motors
+        for (int i = 0; i < 4; i++) {
+            ledcWrite(PWM_CHANNELS[i], 0);
+        }
+        
+        Serial.println("ENCODER RESET BUTTON PRESSED - Pump stopped (CC24=64)");
+    }
+
+    // Update pressure reading and send CC25
     updatePressureReading();
 
     // Update LED display to show current air level with center-based visualization
