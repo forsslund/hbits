@@ -26,7 +26,7 @@ unsigned long lastINA219Reading = 0;
 const unsigned long INA219_INTERVAL = 50; // Read every 50ms
 
 // Power limiting variables
-const float MAX_POWER_W = 8.0; // Maximum allowed power in watts
+const float MAX_POWER_W = 9.0; // Maximum allowed power in watts
 uint8_t maxAllowedHeatLevel = 127; // Auto-discovered power limit (starts at max)
 float averagePower = 0.0; // Running average power
 bool powerLimitActive = false; // Flag to indicate if power limiting is active
