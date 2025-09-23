@@ -260,6 +260,7 @@ void setup() {
     
     // Initialize the Control Surface system
     Control_Surface.begin();
+    encoderResetButton.begin(); // Initialize encoder reset button.
     
     // Initialize encoder to center position (64)
     airEncoder.setValue(64);
