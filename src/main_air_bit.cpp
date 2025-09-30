@@ -284,7 +284,7 @@ void loop() {
     delay(5); // Limit control surface processing.
 
     // Check for encoder reset button press
-    if (encoderResetButton.update() && encoderResetButton.getState() == Button::Pressed) {
+    if (encoderResetButton.update() && encoderResetButton.getState() == Button::Falling) {
         // Reset encoder to center position (64) - stops pump
         airEncoder.setValue(64);
         currentAirLevel = 64;
