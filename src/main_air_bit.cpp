@@ -45,7 +45,7 @@ uint8_t pressureMidiValue = 0;
  * 
  * This sink receives MIDI messages from pipes and controls the air pressure
  * based on CC 24 messages with 64-centered mapping:
- * - CC 64: Stop (all motors off)
+ * - CC 62-66: Stop (all motors off)
  * - CC 65-127: Inflation (increasing PWM)
  * - CC 0-63: Deflation (increasing PWM)
  */
@@ -61,23 +61,23 @@ public:
             uint8_t ccValue = msg.getData2();
             currentAirLevel = ccValue;
             
-            if (ccValue == 64) {
+            if (ccValue <= 66 && ccValue >= 62) {
                 // Stop - all motors off
                 for (int i = 0; i < 4; i++) {
                     ledcWrite(PWM_CHANNELS[i], 0);
                 }
                 Serial.println("Air control: STOPPED (CC24=64)");
                 
-            } else if (ccValue > 64) {
-                // Inflation mode (65-127)
-                uint8_t pwmValue = map(ccValue, 65, 127, 0, 255);
+            } else if (ccValue > 66) {
+                // Inflation mode (67-127)
+                uint8_t pwmValue = map(ccValue, 67, 127, 0, 255);
                 
                 // M1 pump inflate (ON), M2 pump deflate (OFF)
                 ledcWrite(PWM_CHANNELS[0], pwmValue);  // M1 (GPIO 18)
                 ledcWrite(PWM_CHANNELS[1], 0);         // M2 (GPIO 17)
                 
                 // M3 valve inflate (ON), M4 valve deflate (OFF)
-                ledcWrite(PWM_CHANNELS[2], pwmValue);  // M3 (GPIO 10)
+                ledcWrite(PWM_CHANNELS[2], 255);  // M3 (GPIO 10)
                 ledcWrite(PWM_CHANNELS[3], 0);         // M4 (GPIO 9)
                 
                 Serial.print("Air control: INFLATING ");
@@ -88,9 +88,9 @@ public:
                 Serial.print(pwmValue);
                 Serial.println(")");
                 
-            } else {
-                // Deflation mode (0-63)
-                uint8_t pwmValue = map(ccValue, 0, 63, 255, 0);
+            } else if(ccValue < 62) {
+                // Deflation mode (0-61)
+                uint8_t pwmValue = map(ccValue, 0, 61, 255, 0);
                 
                 // M1 pump inflate (OFF), M2 pump deflate (ON)
                 ledcWrite(PWM_CHANNELS[0], 0);         // M1 (GPIO 18)
@@ -98,7 +98,7 @@ public:
                 
                 // M3 valve inflate (OFF), M4 valve deflate (ON)
                 ledcWrite(PWM_CHANNELS[2], 0);         // M3 (GPIO 10)
-                ledcWrite(PWM_CHANNELS[3], pwmValue);  // M4 (GPIO 9)
+                ledcWrite(PWM_CHANNELS[3], 255);  // M4 (GPIO 9)
                 
                 Serial.print("Air control: DEFLATING ");
                 Serial.print(((63 - ccValue) * 100) / 63);
@@ -163,7 +163,7 @@ void updatePressureReading() {
         // Map pressure to MIDI range (measured range: 880-1250 hPa)
         // Constrain to prevent wraparound below minimum pressure
         long pressureCentiPa = (long)(pressureHPa * 100);
-        pressureMidiValue = map(pressureCentiPa, 88000, 125000, 0, 127);
+        pressureMidiValue = map(pressureCentiPa, 88000, 175000, 0, 127);
         pressureMidiValue = constrain(pressureMidiValue, 0, 127);
         
         // Send CC25 MIDI message directly
@@ -253,7 +253,7 @@ void setup() {
     Control_Surface >> pipeFactory >> airSink;
     
     // Set Bluetooth device name
-    midibt.setName("HBITS Air 1");
+    midibt.setName("AIR bit 1 MST");
     
     // Initialize LED controller
     ledController.begin();
@@ -282,6 +282,8 @@ void loop() {
     // Update all MIDI processing and routing
     Control_Surface.loop();
     delay(5); // Limit control surface processing.
+    
+    digitalWrite(LED_BUILTIN, midibt.isConnected() ? HIGH : LOW);
 
     // Check for encoder reset button press
     if (encoderResetButton.update() && encoderResetButton.getState() == Button::Falling) {

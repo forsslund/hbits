@@ -9,11 +9,11 @@ using HapticEffect = std::vector<HapticStep>;
 
 // External effect declarations
 extern const HapticEffect EFFECT_CONST_VIBE;
-extern const HapticEffect EFFECT_PULSE;
-extern const HapticEffect EFFECT_RAMP_UP;
-extern const HapticEffect EFFECT_TWO_PULSE;
-extern const HapticEffect EFFECT_STRONG_BUZZ;
 extern const HapticEffect EFFECT_PULSE_PURR;
+extern const HapticEffect EFFECT_AUDIO_NOISE;
+extern const HapticEffect EFFECT_WAVE;
+extern const HapticEffect EFFECT_BRADYCARDIA_HEAVY;
+extern const HapticEffect EFFECT_STRONG_BUZZ;
 
 class EffectEncoder {
 public:
@@ -42,11 +42,11 @@ public:
     std::shared_ptr<HapticEffect> getEffect(int effectIndex) {
         switch(effectIndex) {
             case 0: return std::make_shared<HapticEffect>(EFFECT_CONST_VIBE);
-            case 1: return std::make_shared<HapticEffect>(EFFECT_PULSE);
-            case 2: return std::make_shared<HapticEffect>(EFFECT_RAMP_UP);
-            case 3: return std::make_shared<HapticEffect>(EFFECT_TWO_PULSE);
-            case 4: return std::make_shared<HapticEffect>(EFFECT_STRONG_BUZZ);
-            case 5: return std::make_shared<HapticEffect>(EFFECT_PULSE_PURR);
+            case 1: return std::make_shared<HapticEffect>(EFFECT_PULSE_PURR);
+            case 2: return std::make_shared<HapticEffect>(EFFECT_AUDIO_NOISE);
+            case 3: return std::make_shared<HapticEffect>(EFFECT_WAVE);
+            case 4: return std::make_shared<HapticEffect>(EFFECT_BRADYCARDIA_HEAVY);
+            case 5: return std::make_shared<HapticEffect>(EFFECT_STRONG_BUZZ);
             default: return std::make_shared<HapticEffect>(EFFECT_CONST_VIBE);
         }
     }
