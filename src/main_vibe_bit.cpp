@@ -105,7 +105,7 @@ void setup() {
     midibt >> pipeFactory >> hapticSink;
     
     // Set Bluetooth device name
-    midibt.setName("HBITS Vibe 1");
+    midibt.setName("HBITS Vibe 2");
     
     // Initialize LED controller
     ledController.begin();
@@ -118,7 +118,7 @@ void setup() {
     
     // Configure FSR scaling to map 0-5150 to full MIDI range (0-127)
     fsr.map([](analog_t rawValue) -> analog_t {
-        constexpr analog_t maxFSR = 5150;        // Your maximum FSR pressure value
+        constexpr analog_t maxFSR = 2900;        // Your maximum FSR pressure value for grey FSR 2900 (before 5150 with black FSR)
         constexpr analog_t maxEnhanced = 16383;  // 14-bit enhanced range (2^14 - 1)
         
         // Clamp and scale the FSR value to full enhanced range

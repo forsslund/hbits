@@ -17,7 +17,7 @@ LEDController ledController;
 Adafruit_INA219 ina219;
 
 // Heat control PWM setup
-const uint8_t HEAT_PIN = 18;        // GPIO pin for MOSFET M0
+const uint8_t HEAT_PIN = 18;        // GPIO pin for MOSFET M1
 const uint8_t HEAT_PWM_CHANNEL = 0; // PWM channel for heat control
 volatile uint8_t currentHeatLevel = 0; // Current heat level (0-127)
 
@@ -177,7 +177,7 @@ void setup() {
     midibt >> pipeFactory >> heatSink;
     
     // Set Bluetooth device name
-    midibt.setName("HBITS Heat 1");
+    midibt.setName("HBITS Heat 2");
     
     // Initialize LED controller
     ledController.begin();
