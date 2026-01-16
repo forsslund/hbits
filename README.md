@@ -1,12 +1,19 @@
 # Haptic Bits Lab Repository
 here you find all the necessary files to be able to eithe build your own or repair a Haptic Bit. If you want to know more what a haptic bit is or the Haptic Bits Lab, have a look here: (https://hbits.forsslundsystems.com)
 
+## Software Recommendation for MIDI Recording
+The are myriads of choices of MIDI recording software. Here's a list of some that work great with the bits:
+- Chataigne: A multipurpose sequencer that also supports MIDI. You'll find a template in the folder "MIDI". It's configured to record all bits in one kit. https://benjamin.kuperberg.fr/chataigne/en
+- Signal: Online MIDI sequencer that runs great on Chrome (note: doesn't work with Safari): https://signalmidi.app/edit
+- MIDI Bitslab: Our own attempt of a recording environment that runs great on Chrome (note: doesn't work with Safari). It emphasises sketching and direct recording and has some features to make dynamic patches. : https://github.com/somaBits/Midi_BitLab/
+
+
 ## Firmware
 The bits are driven by an ESP32. If you would like to make changes to the firmware you are free to download this repository and open it in VS code with the platform.io plugin.
 
 This can be usefull if for example you wish to customise the haptic patterns for the vibration bits.
 
-# Do it Yourself
+## Do it Yourself
 The Haptic Bits Lab is designed to be built by anyone that has access to a 3D printer and laser cutter. The bill of materials is in [foldername]. The carrier PCB are produced by PCBway and can be order semi-populated with SMD parts via this link: (https://www.pcbway.com/project/shareproject/Haptic_Bits_Lab_Carrier_PCB_semi_populated_7a38576c.html)
 
 The 3D model of the enclosure are modelled in Fusion 360 and can be downloaded here:
