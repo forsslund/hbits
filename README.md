@@ -21,10 +21,10 @@ The 3D model of the enclosure are modelled in Fusion 360 and can be downloaded h
 
 |Name | Link | Image |
 | ------------- | ------------- | ------------- |
-| AIR enclosure | https://a360.co/3LH06NW | ![AIR](https://github.com/user-attachments/assets/d55b6fac-87f3-424a-9efa-90fedc94c571) |
-| VIBE / HEAT enclosure | https://a360.co/4b2XGnf | ![VIBE:HEAT](https://github.com/user-attachments/assets/b21250de-ba8c-46b2-b5a4-6822bc7ba87f) |
-| Rotary Knob | https://a360.co/4jEkBaE | ![Knob](https://github.com/user-attachments/assets/d07edb3d-1eb6-47a5-bff6-354c7bf92140) |
-| LED Ring Support | https://a360.co/4jEkBaE | ![LED support](https://github.com/user-attachments/assets/95b652a9-eae0-4722-9c73-2f53bbcf477d) |
-| USB-C Support | https://a360.co/4qu6h79 | ![USB-C Support](https://github.com/user-attachments/assets/8fe35e68-db01-4e86-b39b-f433a2df9841) |
-| VIBE Puck | https://a360.co/3NGZx7i | ![VIBE Puck](https://github.com/user-attachments/assets/28ec015c-1ade-4de0-803e-54617480d0c3) |
+| AIR enclosure | https://a360.co/3LH06NW or [3MF file for printing ](hardware/3d_models/HBL_AIR.3mf)| ![AIR](https://github.com/user-attachments/assets/d55b6fac-87f3-424a-9efa-90fedc94c571) |
+| VIBE / HEAT enclosure | https://a360.co/4b2XGnf or [3MF file for printing ](hardware/3d_models/HBL_VIBEHEAT.3mf) | ![VIBE:HEAT](https://github.com/user-attachments/assets/b21250de-ba8c-46b2-b5a4-6822bc7ba87f) |
+| Rotary Knob | https://a360.co/4jEkBaE or [3MF file for printing ](hardware/3d_models/HBL KNOBS_6x.3mf) | ![Knob](https://github.com/user-attachments/assets/d07edb3d-1eb6-47a5-bff6-354c7bf92140) |
+| LED Ring Support | https://a360.co/4jEkBaE or [3MF file for printing ](hardware/3d_models/HBL_RING_SUPPORT.3mf) | ![LED support](https://github.com/user-attachments/assets/95b652a9-eae0-4722-9c73-2f53bbcf477d) |
+| USB-C Support | https://a360.co/4qu6h79  or [3MF file for printing ](hardware/3d_models/HBL_USB_SUPPORT.3mf) | ![USB-C Support](https://github.com/user-attachments/assets/8fe35e68-db01-4e86-b39b-f433a2df9841) |
+| VIBE Puck | https://a360.co/3NGZx7i  or [3MF file for printing ](hardware/3d_models/HBL_PUCK.3mf) | ![VIBE Puck](https://github.com/user-attachments/assets/28ec015c-1ade-4de0-803e-54617480d0c3) |
 
