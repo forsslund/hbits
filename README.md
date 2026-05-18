@@ -14,7 +14,9 @@ The bits are driven by an ESP32. If you would like to make changes to the firmwa
 This can be usefull if for example you wish to customise the haptic patterns for the vibration bits.
 
 ## Do it Yourself
-The Haptic Bits Lab is designed to be built by anyone that has access to a 3D printer and laser cutter. The bill of materials is in [foldername]. The carrier PCB are produced by PCBway and can be order semi-populated with SMD parts via this link: (https://www.pcbway.com/project/shareproject/Haptic_Bits_Lab_Carrier_PCB_semi_populated_7a38576c.html)
+The Haptic Bits Lab is designed to be built by anyone that has access to a 3D printer and laser cutter. The carrier PCB are produced by PCBway and can be order semi-populated with SMD parts via this link: (https://www.pcbway.com/project/shareproject/Haptic_Bits_Lab_Carrier_PCB_semi_populated_7a38576c.html)
+
+This Bill of material contains all the third-party parts needed to create the bits: (https://docs.google.com/spreadsheets/d/1yp4ojiJQZM4SgLv2cJ91fp2alQbMcc3hZMMRH2068LM/edit?usp=sharing)
 
 The 3D model of the enclosure are modelled in Fusion 360 and can be downloaded here:
 
